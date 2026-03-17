@@ -69,3 +69,20 @@
 - [x] Restyle all pages: Home, SubmitJob, Dashboard, JobDetailPage, ApprovalPage, QueuePage, HistoryPage, AdminPage
 - [x] Restyle status badges: cyan/amber/red/grey pills
 - [x] Restyle buttons: solid cyan primary, transparent cyan outline secondary, muted red destructive
+
+## V4 Fixes & Improvements
+- [x] Bug: Wire Resend email API (install resend package, add RESEND_API_KEY secret, update email.ts)
+- [x] Bug: Approver name on dashboard reads live from approver_config, not stale at job creation
+- [x] Bug: Guardrail Review sidebar nav routes to /guardrails (standalone page, not /admin)
+- [x] Dashboard: Replace stats row with Posts This Week, In Queue, Awaiting Approval, Avg Posts/Week
+- [x] Dashboard: Pillar distribution chart (bar/donut, published posts only, hidden if no history)
+- [x] Dashboard: Monthly posting calendar (cyan = AA, amber = David, split = both, today border)
+- [x] UX: Workflow prompt on Dashboard — "n posts awaiting approval" and "n posts ready to publish"
+- [x] UX: Nav badges on sidebar (awaiting approval count, guardrail review count)
+- [x] UX: Submit Post confirmation message after submission (full success screen with 'what happens next')
+- [x] UX: Collapsible how-to panel on SubmitJob page (5-step workflow explanation)
+- [x] Email: Inline post drafts in approval email HTML
+- [x] Email: One-click token approve button in email (no login required)
+- [x] Email: Profile-distinct subject lines ([David's Posts] vs [AA Posts])
+- [x] Email: Mobile-friendly large approve button
+- [x] Post History: Remove audit log from UI (kept in DB), show only published posts clean list

@@ -18,7 +18,8 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { AlertTriangle, Loader2, PenLine, Info } from "lucide-react";
+import { AlertTriangle, Loader2, PenLine, Info, ChevronDown, ChevronUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 const AA_PILLARS = [
   "Manufacturer Authority",
@@ -50,6 +51,8 @@ export default function SubmitJob() {
   const [variantCount, setVariantCount] = useState(3);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [submittedJobId, setSubmittedJobId] = useState<number | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
 
   const pillars = profile === "aa_company" ? AA_PILLARS : profile === "david_personal" ? DAVID_PILLARS : [];
 
@@ -59,8 +62,8 @@ export default function SubmitJob() {
         setSubmittedJobId(data.jobId);
         setShowConfirmation(true);
       } else {
-        toast.success("Content idea submitted! Generation has started.");
-        navigate("/dashboard");
+        setSubmittedJobId(data.jobId);
+        setShowSuccess(true);
       }
     },
     onError: (err) => {
@@ -69,9 +72,10 @@ export default function SubmitJob() {
   });
 
   const confirmMutation = trpc.jobs.confirmNamedClient.useMutation({
-    onSuccess: () => {
-      toast.success("Confirmed. Generation has started.");
-      navigate("/dashboard");
+    onSuccess: (_, variables) => {
+      setShowConfirmation(false);
+      setSubmittedJobId(variables.jobId);
+      setShowSuccess(true);
     },
     onError: (err) => {
       toast.error(`Confirmation failed: ${err.message}`);
@@ -95,6 +99,66 @@ export default function SubmitJob() {
       variantCount,
     });
   };
+
+  // ── Success screen ─────────────────────────────────────────────────────────
+  if (showSuccess && submittedJobId) {
+    return (
+      <AppLayout title="Submitted">
+        <div className="max-w-lg mx-auto">
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-8 text-center">
+            <CheckCircle2 className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-slate-100 mb-2">Idea Submitted</h2>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              Your content idea is in the pipeline. Claude is now fetching the Absolute Aromas style guide
+              and generating {variantCount} post variants. The approver will receive an email once drafts
+              are ready for review — typically within a few minutes.
+            </p>
+            <div className="rounded-lg border border-white/5 bg-[#0f1117] p-4 text-left mb-6">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-3">What happens next</p>
+              <ol className="space-y-2">
+                {[
+                  "Style guide fetched from Notion",
+                  "Claude generates " + variantCount + " post variants",
+                  "Automated guardrail checks run on each variant",
+                  "Approver receives email with drafts for review",
+                  "Approved post appears in the Ready-to-Post queue",
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-slate-400">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/15 text-cyan-400 text-xs flex items-center justify-center shrink-0 mt-0.5 font-semibold">{i + 1}</span>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Link href={`/dashboard/job/${submittedJobId}`}>
+                <button className="flex items-center gap-1.5 px-4 py-2 rounded bg-cyan-500 text-[#0f1117] text-sm font-semibold hover:bg-cyan-400 transition-colors">
+                  Track this job <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </Link>
+              <button
+                onClick={() => {
+                  setShowSuccess(false);
+                  setSubmittedJobId(null);
+                  setProfile("");
+                  setContentPillar("");
+                  setTopic("");
+                  setTargetAudience("");
+                  setToneHint("");
+                  setReferenceUrl("");
+                  setNamedClientFlag(false);
+                  setVariantCount(3);
+                }}
+                className="px-4 py-2 rounded border border-white/10 text-slate-300 text-sm hover:border-white/20 hover:text-slate-100 transition-colors"
+              >
+                Submit another
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (showConfirmation && submittedJobId) {
     return (
@@ -150,6 +214,42 @@ export default function SubmitJob() {
   return (
     <AppLayout title="Submit Content Idea">
       <div className="max-w-2xl mx-auto">
+        {/* Collapsible how-to */}
+        <div className="mb-5 rounded-lg border border-white/5 bg-[#1a1d27] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setHowToOpen(!howToOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-300 hover:text-slate-100 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-cyan-400" />
+              <span className="font-medium">How this works</span>
+            </span>
+            {howToOpen ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+          </button>
+          {howToOpen && (
+            <div className="px-4 pb-4 border-t border-white/5 pt-3">
+              <ol className="space-y-2">
+                {[
+                  { step: "Fill in the form below", detail: "Choose the profile, content pillar, and describe your idea. The more detail you give, the better Claude's output." },
+                  { step: "Claude generates variants", detail: "The AI fetches the live Absolute Aromas style guide from Notion and produces 3–5 distinct post drafts tailored to the chosen profile's voice." },
+                  { step: "Guardrail checks run automatically", detail: "Every draft is checked against 6 brand compliance rules (medical claims, revenue figures, competitor names, etc.). Flagged posts go to Guardrail Review before the approver sees them." },
+                  { step: "Approver receives an email", detail: "Danny (for AA Company posts) or David (for his personal page) gets an email with all drafts and a one-click approve button." },
+                  { step: "Approved posts land in the queue", detail: "Once approved, the post appears in Ready-to-Post. Copy it, paste it into LinkedIn, then confirm publication with the LinkedIn URL." },
+                ].map(({ step, detail }, i) => (
+                  <li key={i} className="flex gap-3 text-sm">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/15 text-cyan-400 text-xs flex items-center justify-center shrink-0 mt-0.5 font-semibold">{i + 1}</span>
+                    <div>
+                      <span className="text-slate-200 font-medium">{step}: </span>
+                      <span className="text-slate-500">{detail}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Profile selection */}
           <Card>

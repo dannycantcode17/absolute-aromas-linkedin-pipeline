@@ -13,6 +13,7 @@ import HistoryPage from "./pages/HistoryPage";
 import AdminPage from "./pages/AdminPage";
 import JobDetailPage from "./pages/JobDetailPage";
 import IdeaGenerator from "./pages/IdeaGenerator";
+import GuardrailReviewPage from "./pages/GuardrailReviewPage";
 
 function Router() {
   return (
@@ -26,6 +27,8 @@ function Router() {
       <Route path="/queue" component={QueuePage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/approval" component={ApprovalPage} />
+      <Route path="/guardrails" component={GuardrailReviewPage} />
       <Route path="/ideas" component={IdeaGenerator} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

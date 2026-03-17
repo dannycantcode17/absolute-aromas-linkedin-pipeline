@@ -416,3 +416,115 @@ export async function markAuditEntrySynced(id: number, notionPageId: string) {
   if (!db) return;
   await db.update(auditLog).set({ notionSynced: true, notionPageId }).where(eq(auditLog.id, id));
 }
+
+// ─── Dashboard Stats (v4 redesign) ───────────────────────────────────────────
+
+export async function getDashboardStats() {
+  const db = await getDb();
+  const empty = {
+    postsThisWeek: 0, inQueue: 0, awaitingApproval: 0, avgPostsPerWeek: 0,
+    pillarDistribution: [] as { pillar: string; count: number }[],
+    calendarData: [] as { date: string; aaCount: number; davidCount: number }[],
+    pendingApprovalJobIds: [] as number[],
+  };
+  if (!db) return empty;
+
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const fourWeeksAgo = new Date(now);
+  fourWeeksAgo.setDate(now.getDate() - 28);
+  const ninetyDaysAgo = new Date(now);
+  ninetyDaysAgo.setDate(now.getDate() - 90);
+
+  const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt));
+  const allPosts = await db.select().from(posts);
+
+  const postsThisWeek = allPosts.filter(
+    (p) => p.publicationStatus === "confirmed" && p.publishedAt && p.publishedAt >= startOfWeek
+  ).length;
+
+  const inQueue = allPosts.filter((p) => p.status === "approved" && !p.publishedAt).length;
+
+  const awaitingApprovalJobs = allJobs.filter((j) => j.status === "pending_approval");
+  const awaitingApproval = awaitingApprovalJobs.length;
+  const pendingApprovalJobIds = awaitingApprovalJobs.map((j) => j.id);
+
+  const publishedLast4Weeks = allPosts.filter(
+    (p) => p.publicationStatus === "confirmed" && p.publishedAt && p.publishedAt >= fourWeeksAgo
+  );
+  const avgPostsPerWeek = Math.round((publishedLast4Weeks.length / 4) * 10) / 10;
+
+  // Pillar distribution (published posts only)
+  const publishedPosts = allPosts.filter((p) => p.publicationStatus === "confirmed");
+  const pillarMap: Record<string, number> = {};
+  for (const post of publishedPosts) {
+    const job = allJobs.find((j) => j.id === post.jobId);
+    if (job?.contentPillar) {
+      pillarMap[job.contentPillar] = (pillarMap[job.contentPillar] ?? 0) + 1;
+    }
+  }
+  const pillarDistribution = Object.entries(pillarMap)
+    .map(([pillar, count]) => ({ pillar, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Calendar data: published posts grouped by date and profile (last 90 days)
+  const recentPublished = allPosts.filter(
+    (p) => p.publicationStatus === "confirmed" && p.publishedAt && p.publishedAt >= ninetyDaysAgo
+  );
+  const calendarMap: Record<string, { aaCount: number; davidCount: number }> = {};
+  for (const post of recentPublished) {
+    if (!post.publishedAt) continue;
+    const dateKey = post.publishedAt.toISOString().slice(0, 10);
+    const job = allJobs.find((j) => j.id === post.jobId);
+    if (!calendarMap[dateKey]) calendarMap[dateKey] = { aaCount: 0, davidCount: 0 };
+    if (job?.profile === "aa_company") calendarMap[dateKey].aaCount++;
+    else if (job?.profile === "david_personal") calendarMap[dateKey].davidCount++;
+  }
+  const calendarData = Object.entries(calendarMap).map(([date, counts]) => ({ date, ...counts }));
+
+  return { postsThisWeek, inQueue, awaitingApproval, avgPostsPerWeek, pillarDistribution, calendarData, pendingApprovalJobIds };
+}
+
+// ─── Published posts for History page (v4 simplified) ────────────────────────
+
+export async function getPublishedPosts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: posts.id,
+      jobId: posts.jobId,
+      content: posts.content,
+      variantLabel: posts.variantLabel,
+      publishedAt: posts.publishedAt,
+      linkedInUrl: posts.linkedInUrl,
+      approvedBy: posts.approvedBy,
+      profile: jobs.profile,
+      contentPillar: jobs.contentPillar,
+      topic: jobs.topic,
+    })
+    .from(posts)
+    .innerJoin(jobs, eq(posts.jobId, jobs.id))
+    .where(eq(posts.publicationStatus, "confirmed"))
+    .orderBy(desc(posts.publishedAt))
+    .limit(200);
+}
+
+// ─── Jobs with live approver names (fixes stale name bug) ────────────────────
+
+export async function getJobsWithLiveApproverNames() {
+  const db = await getDb();
+  if (!db) return [];
+  const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(100);
+  const configs = await db.select().from(approverConfig);
+  const configMap: Record<string, string> = {};
+  for (const c of configs) {
+    configMap[c.approverRole] = c.name;
+  }
+  return allJobs.map((j) => ({
+    ...j,
+    approverName: configMap[j.requiredApprover] ?? j.requiredApprover,
+  }));
+}

@@ -32,6 +32,9 @@ import {
   updateUserRole,
   getPendingGuardrailReviews,
   getActivePostsByJobId,
+  getDashboardStats,
+  getPublishedPosts,
+  getJobsWithLiveApproverNames,
 } from "./db";
 import { sendApprovalConfirmationEmail, sendEditRequestEmail } from "./email";
 import { runGenerationPipeline } from "./pipeline";
@@ -524,6 +527,32 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       const { getQueueAnalytics } = await import("./db");
       return getQueueAnalytics();
+    }),
+
+    /** Get enhanced dashboard stats for v4 redesign */
+    dashboardStats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return getDashboardStats();
+    }),
+  }),
+
+  // ─── History ───────────────────────────────────────────────────────────────
+
+  history: router({
+    /** Get all published posts for the simplified history page */
+    listPublished: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return getPublishedPosts();
+    }),
+  }),
+
+  // ─── Jobs with live approver names ─────────────────────────────────────────
+
+  jobsEnriched: router({
+    /** Jobs list with live approver names from approver_config table */
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return getJobsWithLiveApproverNames();
     }),
   }),
 
