@@ -86,3 +86,43 @@
 - [x] Email: Profile-distinct subject lines ([David's Posts] vs [AA Posts])
 - [x] Email: Mobile-friendly large approve button
 - [x] Post History: Remove audit log from UI (kept in DB), show only published posts clean list
+
+## V5 — Blog Post Content Type + In-App Style Guide Config
+
+### Schema Changes
+- [x] Add `blog_post` to `jobs.profile` enum (migration)
+- [x] Add `blogKeyword`, `blogTone`, `blogWordCount` columns to `jobs` table (migration)
+- [x] Create `style_guides` table: id, profile, content, updatedAt (migration)
+- [x] Create `guardrail_config` table: id, competitorNames, bannedPhrases, flaggedClaimTypes, updatedAt (migration)
+- [x] Create `posting_rhythm` table: id, profile, targetPerWeek, updatedAt (migration)
+- [ ] Seed style_guides with current Notion content (AA, David, Blog defaults) — admin can do via Settings page
+- [ ] Seed guardrail_config with current hardcoded patterns from notion.ts — admin can do via Settings page
+
+### Backend — Style Guide Migration (Update 2)
+- [x] Remove Notion style guide fetch from generation pipeline (keep audit log sync)
+- [x] Generation service reads style guide from DB style_guides table
+- [x] Graceful error if style guide not configured: "Style guide not configured — go to Admin → Settings"
+- [x] DB helpers: getStyleGuide, upsertStyleGuide, getGuardrailConfig, upsertGuardrailConfig, getPostingRhythm, upsertPostingRhythm
+- [x] tRPC procedures: settings.listStyleGuides, settings.upsertStyleGuide, settings.getGuardrailConfig, settings.updateGuardrailConfig, settings.listPostingRhythm, settings.upsertPostingRhythm
+
+### Backend — Blog Post Generation (Update 1)
+- [x] Blog-specific system prompt: structured output (Title, Meta description 155 chars, H2 body, suggested internal links, suggested tags)
+- [x] Blog generation produces exactly 2 variants
+- [x] Guardrails apply identically to blog posts
+- [x] Blog approver always routes to Danny (same as AA Company Page)
+- [x] generation.ts handles blog_post profile with separate prompt path
+
+### Admin Settings Page (Update 2)
+- [x] Admin → Settings page with 5 tabs: Style Guides / Guardrails / Approvers / Posting Rhythm / Users
+- [x] Style Guides tab: 3 rich text areas (AA / David / Blog), save per guide, last updated timestamp
+- [x] Guardrails tab: editable competitor names list, banned phrases list, flagged claim types
+- [x] Approvers tab: moved from current location, Danny (AA + Blog), David (personal only)
+- [x] Posting Rhythm tab: target posts/week per profile, on-track indicator on dashboard
+
+### Frontend — Blog Post UX (Update 1)
+- [x] Submission form: "Blog Post" as third option in Content Profile selector
+- [x] Blog-specific fields shown when Blog Post selected: keyword, tone dropdown, word count dropdown
+- [ ] Queue page: "Type" badge distinguishing LinkedIn AA / LinkedIn David / Blog
+- [ ] Dashboard calendar: purple/violet colour for Blog posts (third colour)
+- [ ] Dashboard pillar chart: separate LinkedIn vs Blog post types
+- [ ] Post History: "Blog" type badge, "View full post" expand showing title + meta + body

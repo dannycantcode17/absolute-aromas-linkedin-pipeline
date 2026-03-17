@@ -4,12 +4,15 @@ import {
   approvalTokens,
   approverConfig,
   auditLog,
+  guardrailConfig,
   guardrailReviews,
   ideaBatches,
   ideas,
   InsertUser,
   jobs,
+  postingRhythm,
   posts,
+  styleGuides,
   users,
   type GuardrailFlag,
   type InsertJob,
@@ -424,7 +427,7 @@ export async function getDashboardStats() {
   const empty = {
     postsThisWeek: 0, inQueue: 0, awaitingApproval: 0, avgPostsPerWeek: 0,
     pillarDistribution: [] as { pillar: string; count: number }[],
-    calendarData: [] as { date: string; aaCount: number; davidCount: number }[],
+    calendarData: [] as { date: string; aaCount: number; davidCount: number; blogCount: number }[],
     pendingApprovalJobIds: [] as number[],
   };
   if (!db) return empty;
@@ -473,14 +476,15 @@ export async function getDashboardStats() {
   const recentPublished = allPosts.filter(
     (p) => p.publicationStatus === "confirmed" && p.publishedAt && p.publishedAt >= ninetyDaysAgo
   );
-  const calendarMap: Record<string, { aaCount: number; davidCount: number }> = {};
+  const calendarMap: Record<string, { aaCount: number; davidCount: number; blogCount: number }> = {};
   for (const post of recentPublished) {
     if (!post.publishedAt) continue;
     const dateKey = post.publishedAt.toISOString().slice(0, 10);
     const job = allJobs.find((j) => j.id === post.jobId);
-    if (!calendarMap[dateKey]) calendarMap[dateKey] = { aaCount: 0, davidCount: 0 };
+    if (!calendarMap[dateKey]) calendarMap[dateKey] = { aaCount: 0, davidCount: 0, blogCount: 0 };
     if (job?.profile === "aa_company") calendarMap[dateKey].aaCount++;
     else if (job?.profile === "david_personal") calendarMap[dateKey].davidCount++;
+    else if (job?.profile === "blog_post") calendarMap[dateKey].blogCount++;
   }
   const calendarData = Object.entries(calendarMap).map(([date, counts]) => ({ date, ...counts }));
 
@@ -510,6 +514,61 @@ export async function getPublishedPosts() {
     .where(eq(posts.publicationStatus, "confirmed"))
     .orderBy(desc(posts.publishedAt))
     .limit(200);
+}
+
+// ─── Style Guides (v5) ────────────────────────────────────────────────────────
+
+export async function getStyleGuideForProfile(profile: "aa_company" | "david_personal" | "blog_post") {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(styleGuides).where(eq(styleGuides.profile, profile)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function getAllStyleGuides() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(styleGuides).orderBy(styleGuides.profile);
+}
+
+export async function upsertStyleGuide(profile: "aa_company" | "david_personal" | "blog_post", content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(styleGuides).values({ profile, content }).onDuplicateKeyUpdate({ set: { content } });
+}
+
+// ─── Guardrail Config (v5) ────────────────────────────────────────────────────
+
+export async function getGuardrailConfig() {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(guardrailConfig).limit(1);
+  return result[0] ?? null;
+}
+
+export async function upsertGuardrailConfig(data: { competitorNames: string; bannedPhrases: string; flaggedClaimTypes: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getGuardrailConfig();
+  if (existing) {
+    await db.update(guardrailConfig).set({ ...data }).where(eq(guardrailConfig.id, existing.id));
+  } else {
+    await db.insert(guardrailConfig).values(data);
+  }
+}
+
+// ─── Posting Rhythm (v5) ──────────────────────────────────────────────────────
+
+export async function getAllPostingRhythm() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(postingRhythm).orderBy(postingRhythm.profile);
+}
+
+export async function upsertPostingRhythm(profile: "aa_company" | "david_personal" | "blog_post", targetPerWeek: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(postingRhythm).values({ profile, targetPerWeek }).onDuplicateKeyUpdate({ set: { targetPerWeek } });
 }
 
 // ─── Jobs with live approver names (fixes stale name bug) ────────────────────

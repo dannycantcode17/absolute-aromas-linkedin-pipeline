@@ -33,8 +33,8 @@ export type InsertUser = typeof users.$inferInsert;
 export const jobs = mysqlTable("jobs", {
   id: int("id").autoincrement().primaryKey(),
   submittedById: int("submittedById").notNull(), // FK → users.id
-  /** "aa_company" | "david_personal" */
-  profile: mysqlEnum("profile", ["aa_company", "david_personal"]).notNull(),
+  /** "aa_company" | "david_personal" | "blog_post" */
+  profile: mysqlEnum("profile", ["aa_company", "david_personal", "blog_post"]).notNull(),
   /** Content pillar from the style guide */
   contentPillar: varchar("contentPillar", { length: 128 }).notNull(),
   /** Free-text topic / idea / angle */
@@ -49,6 +49,13 @@ export const jobs = mysqlTable("jobs", {
   targetAudience: text("targetAudience"),
   /** Tone hint (optional) */
   toneHint: text("toneHint"),
+  // ─── Blog-specific fields (only populated when profile = "blog_post") ───
+  /** Target keyword / SEO topic */
+  blogKeyword: varchar("blogKeyword", { length: 255 }),
+  /** Blog tone */
+  blogTone: mysqlEnum("blogTone", ["educational", "thought_leadership", "story_driven"]),
+  /** Target word count band */
+  blogWordCount: mysqlEnum("blogWordCount", ["short", "standard", "long"]),
   /**
    * Job lifecycle:
    * pending_confirmation → waiting for named-client secondary confirmation
@@ -266,7 +273,7 @@ export const ideas = mysqlTable("ideas", {
   /** Suggested content pillar */
   suggestedPillar: varchar("suggestedPillar", { length: 128 }),
   /** Suggested profile */
-  suggestedProfile: mysqlEnum("suggestedProfile", ["aa_company", "david_personal"]),
+  suggestedProfile: mysqlEnum("suggestedProfile", ["aa_company", "david_personal", "blog_post"]),
   /** Why this idea fits the brand */
   rationale: text("rationale"),
   /**
@@ -282,3 +289,46 @@ export const ideas = mysqlTable("ideas", {
 
 export type Idea = typeof ideas.$inferSelect;
 export type InsertIdea = typeof ideas.$inferInsert;
+
+// ─── Style Guides ─────────────────────────────────────────────────────────────
+// In-app editable style guides — one per content profile.
+// Replaces the Notion style guide fetch for generation.
+
+export const styleGuides = mysqlTable("style_guides", {
+  id: int("id").autoincrement().primaryKey(),
+  profile: mysqlEnum("profile", ["aa_company", "david_personal", "blog_post"]).notNull().unique(),
+  content: text("content").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StyleGuide = typeof styleGuides.$inferSelect;
+export type InsertStyleGuide = typeof styleGuides.$inferInsert;
+
+// ─── Guardrail Config ─────────────────────────────────────────────────────────
+// Admin-editable lists of blocked terms and flagged claim types.
+// Replaces hardcoded patterns in notion.ts.
+
+export const guardrailConfig = mysqlTable("guardrail_config", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Newline-separated list of competitor names to block */
+  competitorNames: text("competitorNames").notNull().default(""),
+  /** Newline-separated list of banned phrase patterns */
+  bannedPhrases: text("bannedPhrases").notNull().default(""),
+  /** Newline-separated list of flagged claim types (medical, financial, superlative) */
+  flaggedClaimTypes: text("flaggedClaimTypes").notNull().default("medical,financial,superlative"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GuardrailConfig = typeof guardrailConfig.$inferSelect;
+
+// ─── Posting Rhythm ───────────────────────────────────────────────────────────
+// Target posts per week per profile — informational, used for on-track indicators.
+
+export const postingRhythm = mysqlTable("posting_rhythm", {
+  id: int("id").autoincrement().primaryKey(),
+  profile: mysqlEnum("profile", ["aa_company", "david_personal", "blog_post"]).notNull().unique(),
+  targetPerWeek: int("targetPerWeek").notNull().default(2),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PostingRhythm = typeof postingRhythm.$inferSelect;

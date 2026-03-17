@@ -70,15 +70,15 @@ function StatCard({
 function MonthlyCalendar({
   calendarData,
 }: {
-  calendarData: { date: string; aaCount: number; davidCount: number }[];
+  calendarData: { date: string; aaCount: number; davidCount: number; blogCount?: number }[];
 }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
 
   const dataMap = useMemo(() => {
-    const m: Record<string, { aaCount: number; davidCount: number }> = {};
-    for (const d of calendarData) m[d.date] = { aaCount: d.aaCount, davidCount: d.davidCount };
+    const m: Record<string, { aaCount: number; davidCount: number; blogCount: number }> = {};
+    for (const d of calendarData) m[d.date] = { aaCount: d.aaCount, davidCount: d.davidCount, blogCount: d.blogCount ?? 0 };
     return m;
   }, [calendarData]);
 
@@ -123,7 +123,8 @@ function MonthlyCalendar({
           const isToday = dateStr === todayStr;
           const hasAA = entry && entry.aaCount > 0;
           const hasDavid = entry && entry.davidCount > 0;
-          const hasPost = hasAA || hasDavid;
+          const hasBlog = entry && entry.blogCount > 0;
+          const hasPost = hasAA || hasDavid || hasBlog;
           return (
             <div key={dateStr} className={`aspect-square flex flex-col items-center justify-center rounded text-xs ${isToday ? "ring-1 ring-cyan-500/60 bg-cyan-500/10" : hasPost ? "bg-white/5" : ""}`}>
               <span className={`font-medium ${isToday ? "text-cyan-400" : hasPost ? "text-slate-200" : "text-slate-600"}`}>{day}</span>
@@ -131,6 +132,7 @@ function MonthlyCalendar({
                 <div className="flex gap-0.5 mt-0.5">
                   {hasAA && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
                   {hasDavid && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                  {hasBlog && <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />}
                 </div>
               )}
             </div>
@@ -143,6 +145,9 @@ function MonthlyCalendar({
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-500">
           <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> David Personal
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" /> Blog Post
         </div>
       </div>
     </div>

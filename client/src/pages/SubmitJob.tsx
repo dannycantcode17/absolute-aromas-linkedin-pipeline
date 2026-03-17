@@ -39,9 +39,18 @@ const DAVID_PILLARS = [
   "Industry History & Evolution",
 ];
 
+const BLOG_PILLARS = [
+  "Essential Oil Education",
+  "Private Label Insights",
+  "Manufacturing & Quality",
+  "Industry Trends",
+  "Sourcing & Sustainability",
+  "Brand Building",
+];
+
 export default function SubmitJob() {
   const [, navigate] = useLocation();
-  const [profile, setProfile] = useState<"aa_company" | "david_personal" | "">("");
+  const [profile, setProfile] = useState<"aa_company" | "david_personal" | "blog_post" | "">("");
   const [contentPillar, setContentPillar] = useState("");
   const [topic, setTopic] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
@@ -49,12 +58,15 @@ export default function SubmitJob() {
   const [referenceUrl, setReferenceUrl] = useState("");
   const [namedClientFlag, setNamedClientFlag] = useState(false);
   const [variantCount, setVariantCount] = useState(3);
+  const [blogKeyword, setBlogKeyword] = useState("");
+  const [blogTone, setBlogTone] = useState<"educational" | "thought_leadership" | "story_driven" | "">("educational");
+  const [blogWordCount, setBlogWordCount] = useState<"short" | "standard" | "long">("standard");
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [submittedJobId, setSubmittedJobId] = useState<number | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [howToOpen, setHowToOpen] = useState(false);
 
-  const pillars = profile === "aa_company" ? AA_PILLARS : profile === "david_personal" ? DAVID_PILLARS : [];
+  const pillars = profile === "aa_company" ? AA_PILLARS : profile === "david_personal" ? DAVID_PILLARS : profile === "blog_post" ? BLOG_PILLARS : [];
 
   const submitMutation = trpc.jobs.submit.useMutation({
     onSuccess: (data) => {
@@ -89,14 +101,17 @@ export default function SubmitJob() {
       return;
     }
     submitMutation.mutate({
-      profile: profile as "aa_company" | "david_personal",
+      profile: profile as "aa_company" | "david_personal" | "blog_post",
       contentPillar,
       topic: topic.trim(),
       targetAudience: targetAudience.trim() || undefined,
       toneHint: toneHint.trim() || undefined,
       referenceUrl: referenceUrl.trim() || undefined,
       namedClientFlag,
-      variantCount,
+      variantCount: profile === "blog_post" ? 2 : variantCount,
+      blogKeyword: profile === "blog_post" ? blogKeyword.trim() || undefined : undefined,
+      blogTone: profile === "blog_post" && blogTone ? blogTone : undefined,
+      blogWordCount: profile === "blog_post" ? blogWordCount : undefined,
     });
   };
 
@@ -263,7 +278,7 @@ export default function SubmitJob() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => { setProfile("aa_company"); setContentPillar(""); }}
@@ -287,6 +302,18 @@ export default function SubmitJob() {
                 >
                   <p className="font-medium text-sm text-foreground">David Personal Page</p>
                   <p className="text-xs text-muted-foreground mt-1">David's voice — approved by David only</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setProfile("blog_post"); setContentPillar(""); }}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    profile === "blog_post"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <p className="font-medium text-sm text-foreground">Blog Post</p>
+                  <p className="text-xs text-muted-foreground mt-1">Long-form content — 2 variants</p>
                 </button>
               </div>
               {profile === "david_personal" && (
@@ -376,11 +403,62 @@ export default function SubmitJob() {
                   placeholder="https://..."
                 />
               </div>
+
+              {/* Blog-specific fields */}
+              {profile === "blog_post" && (
+                <>
+                  <div className="border-t border-white/5 pt-4">
+                    <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-3">Blog Post Options</p>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="blogKeyword">Target Keyword / SEO Focus <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                        <Input
+                          id="blogKeyword"
+                          value={blogKeyword}
+                          onChange={(e) => setBlogKeyword(e.target.value)}
+                          placeholder="e.g. private label essential oils, wholesale aromatherapy"
+                        />
+                        <p className="text-xs text-muted-foreground">Claude will weave this keyword naturally into the post.</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="blogTone">Blog Tone</Label>
+                          <Select value={blogTone} onValueChange={(v) => setBlogTone(v as typeof blogTone)}>
+                            <SelectTrigger id="blogTone">
+                              <SelectValue placeholder="Select tone" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="educational">Educational</SelectItem>
+                              <SelectItem value="thought_leadership">Thought Leadership</SelectItem>
+                              <SelectItem value="story_driven">Story-Driven</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="blogWordCount">Word Count</Label>
+                          <Select value={blogWordCount} onValueChange={(v) => setBlogWordCount(v as typeof blogWordCount)}>
+                            <SelectTrigger id="blogWordCount">
+                              <SelectValue placeholder="Select length" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="short">Short (~600 words)</SelectItem>
+                              <SelectItem value="standard">Standard (~1,000 words)</SelectItem>
+                              <SelectItem value="long">Long (~1,500 words)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
           {/* Options */}
-          <Card>
+          {profile !== "blog_post" && (
+          <Card
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Generation Options</CardTitle>
             </CardHeader>
@@ -432,6 +510,7 @@ export default function SubmitJob() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           <Button
             type="submit"

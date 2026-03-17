@@ -6,7 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   addAuditEntry,
-  consumeApprovalToken,
+  createApprovalToken,
   createIdeaBatch,
   createIdeas,
   createJob,
@@ -35,6 +35,7 @@ import {
   getDashboardStats,
   getPublishedPosts,
   getJobsWithLiveApproverNames,
+  consumeApprovalToken,
 } from "./db";
 import { sendApprovalConfirmationEmail, sendEditRequestEmail } from "./email";
 import { runGenerationPipeline } from "./pipeline";
@@ -88,7 +89,7 @@ export const appRouter = router({
     submit: protectedProcedure
       .input(
         z.object({
-          profile: z.enum(["aa_company", "david_personal"]),
+          profile: z.enum(["aa_company", "david_personal", "blog_post"]),
           contentPillar: z.string().min(1).max(128),
           topic: z.string().min(10).max(2000),
           targetAudience: z.string().max(500).optional(),
@@ -96,6 +97,9 @@ export const appRouter = router({
           referenceUrl: z.string().url().optional().or(z.literal("")),
           namedClientFlag: z.boolean().default(false),
           variantCount: z.number().int().min(2).max(5).default(3),
+          blogKeyword: z.string().max(255).optional(),
+          blogTone: z.enum(["educational", "thought_leadership", "story_driven"]).optional(),
+          blogWordCount: z.enum(["short", "standard", "long"]).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -116,6 +120,9 @@ export const appRouter = router({
           namedClientConfirmed: false,
           status: initialStatus as typeof initialStatus,
           requiredApprover,
+          blogKeyword: input.blogKeyword ?? null,
+          blogTone: input.blogTone ?? null,
+          blogWordCount: input.blogWordCount ?? null,
         };
 
         await createJob(jobData);
@@ -137,12 +144,10 @@ export const appRouter = router({
 
         // If no named client flag, trigger generation immediately
         if (!input.namedClientFlag) {
-          const notionApiKey = process.env.NOTION_API_KEY ?? "";
           const appBaseUrl = getAppBaseUrl(ctx.req);
           // Run async — don't block the response
           runGenerationPipeline({
             jobId: newJob.id,
-            notionApiKey,
             appBaseUrl,
             variantCount: input.variantCount,
           }).catch((err) => console.error("[Pipeline] Error:", err));
@@ -171,9 +176,8 @@ export const appRouter = router({
           action: "named_client_confirmed",
         });
 
-        const notionApiKey = process.env.NOTION_API_KEY ?? "";
         const appBaseUrl = getAppBaseUrl(ctx.req);
-        runGenerationPipeline({ jobId: input.jobId, notionApiKey, appBaseUrl }).catch((err) =>
+        runGenerationPipeline({ jobId: input.jobId, appBaseUrl }).catch((err) =>
           console.error("[Pipeline] Error:", err)
         );
 
@@ -231,9 +235,8 @@ export const appRouter = router({
         const job = await getJobById(input.jobId);
         if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-        const notionApiKey = process.env.NOTION_API_KEY ?? "";
         const appBaseUrl = getAppBaseUrl(ctx.req);
-        const result = await runGenerationPipeline({ jobId: input.jobId, notionApiKey, appBaseUrl });
+        const result = await runGenerationPipeline({ jobId: input.jobId, appBaseUrl });
         return result;
       }),
 
@@ -402,13 +405,11 @@ export const appRouter = router({
         });
 
         // Trigger regeneration with feedback
-        const notionApiKey = process.env.NOTION_API_KEY ?? "";
         // We need the app base URL — use a placeholder that will be resolved in the pipeline
         const appBaseUrl = process.env.APP_BASE_URL ?? "https://localhost:3000";
 
         runGenerationPipeline({
           jobId: job.id,
-          notionApiKey,
           appBaseUrl,
           editFeedback: input.feedback,
           variantCount: input.variantCount,
@@ -586,9 +587,8 @@ export const appRouter = router({
         const job = await getJobById(input.jobId);
         if (!job) throw new TRPCError({ code: "NOT_FOUND" });
 
-        const notionApiKey = process.env.NOTION_API_KEY ?? "";
         const appBaseUrl = getAppBaseUrl(ctx.req);
-        const result = await runGenerationPipeline({ jobId: input.jobId, notionApiKey, appBaseUrl });
+        const result = await runGenerationPipeline({ jobId: input.jobId, appBaseUrl });
         return result;
       }),
   }),
@@ -803,9 +803,8 @@ Return a JSON array of 10 ideas.`;
         });
 
         // Kick off generation pipeline
-        const notionApiKey = process.env.NOTION_API_KEY ?? "";
         const appBaseUrl = process.env.APP_BASE_URL ?? "https://localhost:3000";
-        runGenerationPipeline({ jobId, notionApiKey, appBaseUrl }).catch((err) =>
+        runGenerationPipeline({ jobId, appBaseUrl }).catch((err) =>
           console.error("[Pipeline] Idea queue generation error:", err)
         );
 
@@ -867,6 +866,77 @@ Return a JSON array of 10 ideas.`;
           action: "approver_config_updated",
           details: { role: input.role, email: input.email },
         });
+        return { success: true };
+      }),
+  }),
+
+  // ─── Settings (v5) ───────────────────────────────────────────────────────────────────────────
+  settings: router({
+    // Style Guides
+    listStyleGuides: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { getAllStyleGuides } = await import("./db");
+      return getAllStyleGuides();
+    }),
+
+    upsertStyleGuide: protectedProcedure
+      .input(z.object({
+        profile: z.enum(["aa_company", "david_personal", "blog_post"]),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { upsertStyleGuide } = await import("./db");
+        await upsertStyleGuide(input.profile, input.content);
+        await addAuditEntry({
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "style_guide_updated",
+          details: { profile: input.profile },
+        });
+        return { success: true };
+      }),
+
+    // Guardrail Config
+    getGuardrailConfig: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { getGuardrailConfig } = await import("./db");
+      return getGuardrailConfig();
+    }),
+
+    updateGuardrailConfig: protectedProcedure
+      .input(z.object({
+        competitorNames: z.string(),
+        bannedPhrases: z.string(),
+        flaggedClaimTypes: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { upsertGuardrailConfig } = await import("./db");
+        await upsertGuardrailConfig(input);
+        await addAuditEntry({
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "guardrail_config_updated",
+          details: {},
+        });
+        return { success: true };
+      }),
+
+    // Posting Rhythm
+    listPostingRhythm: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { getAllPostingRhythm } = await import("./db");
+      return getAllPostingRhythm();
+    }),
+
+    upsertPostingRhythm: protectedProcedure
+      .input(z.object({
+        profile: z.enum(["aa_company", "david_personal", "blog_post"]),
+        targetPerWeek: z.number().int().min(0).max(20),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { upsertPostingRhythm } = await import("./db");
+        await upsertPostingRhythm(input.profile, input.targetPerWeek);
         return { success: true };
       }),
   }),

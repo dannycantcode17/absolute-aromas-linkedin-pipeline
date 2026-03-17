@@ -1,194 +1,327 @@
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useState } from "react";
-import { useLocation } from "wouter";
-import { Loader2, CheckCircle, AlertTriangle, Users, Settings } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import {
+  Settings, Users, Shield, BookOpen, BarChart3, Save,
+  RefreshCw, CheckCircle, AlertTriangle, Loader2,
+} from "lucide-react";
 
-export default function AdminPage() {
-  const [location] = useLocation();
-  const defaultTab = location.includes("guardrails") ? "guardrails" : "users";
+type TabId = "style-guides" | "guardrails" | "approvers" | "rhythm" | "users";
 
-  return (
-    <AppLayout title="Admin">
-      <div className="max-w-3xl mx-auto">
-        <Tabs defaultValue={defaultTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="guardrails" className="flex items-center gap-1.5">
-              <AlertTriangle size={14} />
-              Guardrail Review
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-1.5">
-              <Users size={14} />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-1.5">
-              <Settings size={14} />
-              Approver Config
-            </TabsTrigger>
-          </TabsList>
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "style-guides", label: "Style Guides", icon: <BookOpen className="w-4 h-4" /> },
+  { id: "guardrails", label: "Guardrails", icon: <Shield className="w-4 h-4" /> },
+  { id: "approvers", label: "Approvers", icon: <CheckCircle className="w-4 h-4" /> },
+  { id: "rhythm", label: "Posting Rhythm", icon: <BarChart3 className="w-4 h-4" /> },
+  { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+];
 
-          <TabsContent value="guardrails">
-            <GuardrailsTab />
-          </TabsContent>
-          <TabsContent value="users">
-            <UsersTab />
-          </TabsContent>
-          <TabsContent value="config">
-            <ApproverConfigTab />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
-  );
-}
-
-function GuardrailsTab() {
-  const guardrailsQuery = trpc.guardrails.listPending.useQuery(undefined, { refetchInterval: 30000 });
-  const resolveMutation = trpc.guardrails.resolve.useMutation({
-    onSuccess: () => {
-      toast.success("Guardrail flag resolved.");
-      guardrailsQuery.refetch();
-    },
-    onError: (err) => toast.error(err.message),
+// ─── Style Guides Tab ─────────────────────────────────────────────────────────
+function StyleGuidesTab() {
+  const { data: guides, refetch } = trpc.settings.listStyleGuides.useQuery();
+  const upsert = trpc.settings.upsertStyleGuide.useMutation({
+    onSuccess: () => { toast.success("Style guide saved"); refetch(); },
+    onError: (e) => toast.error(e.message),
   });
-
-  const reviews = guardrailsQuery.data ?? [];
+  const profiles: { key: "aa_company" | "david_personal" | "blog_post"; label: string; desc: string }[] = [
+    { key: "aa_company", label: "AA Company Page", desc: "Brand voice for Absolute Aromas LinkedIn company posts" },
+    { key: "david_personal", label: "David Personal Page", desc: "Tone and style for David's personal LinkedIn posts" },
+    { key: "blog_post", label: "Blog Posts", desc: "Writing guidelines for long-form blog content" },
+  ];
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (guides) {
+      const init: Record<string, string> = {};
+      for (const g of guides) init[g.profile] = g.content;
+      setDrafts(init);
+    }
+  }, [guides]);
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        These posts have been flagged by the automated guardrail system. Review each flag and resolve
-        it if you determine it is a false positive or acceptable. Blocking flags prevent approval routing
-        until all are resolved.
-      </p>
-
-      {guardrailsQuery.isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="animate-spin text-muted-foreground" size={20} />
-        </div>
-      ) : reviews.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-8 text-center">
-            <CheckCircle size={28} className="text-primary mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No pending guardrail flags.</p>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Style Guides</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          These guides are injected into every AI generation prompt. Keep them concise — bullet points work well.
+        </p>
+      </div>
+      {profiles.map((p) => (
+        <Card key={p.key} className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-foreground">{p.label}</CardTitle>
+            <CardDescription>{p.desc}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              className="min-h-[200px] font-mono text-sm bg-background border-border text-foreground"
+              placeholder={`Enter style guide for ${p.label}…`}
+              value={drafts[p.key] ?? ""}
+              onChange={(e) => setDrafts((d) => ({ ...d, [p.key]: e.target.value }))}
+            />
+            <Button
+              size="sm"
+              onClick={() => upsert.mutate({ profile: p.key, content: drafts[p.key] ?? "" })}
+              disabled={upsert.isPending || !drafts[p.key]?.trim()}
+              className="bg-cyan-500 hover:bg-cyan-400 text-black"
+            >
+              <Save className="w-3.5 h-3.5 mr-1.5" />
+              Save {p.label} Guide
+            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-3">
-          {reviews.map((item) => (
-            <Card
-              key={item.review.id}
-              className={`border ${item.review.severity === "block" ? "border-red-200 bg-red-50/30" : "border-amber-200 bg-amber-50/30"}`}
-            >
-              <CardContent className="py-3 px-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        className={`text-xs ${item.review.severity === "block" ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}
-                      >
-                        {item.review.severity === "block" ? "BLOCKING" : "WARNING"}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground font-mono">{item.review.flagType}</span>
-                    </div>
-                    <p className="text-sm text-foreground">{item.review.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Post #{item.review.postId} · Job #{item.job.id}: {item.job.topic.slice(0, 60)}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-shrink-0 border-primary/30 text-primary hover:bg-primary/8"
-                    onClick={() => resolveMutation.mutate({ reviewId: item.review.id })}
-                    disabled={resolveMutation.isPending}
-                  >
-                    {resolveMutation.isPending ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <CheckCircle size={13} className="mr-1.5" />
-                    )}
-                    Resolve
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      ))}
     </div>
   );
 }
 
+// ─── Guardrails Config Tab ────────────────────────────────────────────────────
+function GuardrailsTab() {
+  const { data: config, refetch } = trpc.settings.getGuardrailConfig.useQuery();
+  const update = trpc.settings.updateGuardrailConfig.useMutation({
+    onSuccess: () => { toast.success("Guardrail config saved"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const [competitors, setCompetitors] = useState("");
+  const [banned, setBanned] = useState("");
+  const [claims, setClaims] = useState("");
+  useEffect(() => {
+    if (config) {
+      setCompetitors(config.competitorNames ?? "");
+      setBanned(config.bannedPhrases ?? "");
+      setClaims(config.flaggedClaimTypes ?? "");
+    }
+  }, [config]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Guardrail Configuration</h2>
+        <p className="text-sm text-muted-foreground mt-1">One entry per line. These lists flag posts before they reach the approval queue.</p>
+      </div>
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-foreground">Competitor Names</CardTitle>
+          <CardDescription>Posts mentioning these names will be flagged for review.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea className="min-h-[120px] font-mono text-sm bg-background border-border text-foreground"
+            placeholder={"CompetitorA\nCompetitorB"} value={competitors} onChange={(e) => setCompetitors(e.target.value)} />
+        </CardContent>
+      </Card>
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-foreground">Banned Phrases</CardTitle>
+          <CardDescription>Exact phrases that must never appear in generated content.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea className="min-h-[120px] font-mono text-sm bg-background border-border text-foreground"
+            placeholder={"guaranteed results\nbest in class"} value={banned} onChange={(e) => setBanned(e.target.value)} />
+        </CardContent>
+      </Card>
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-foreground">Flagged Claim Types</CardTitle>
+          <CardDescription>Claim categories to flag (e.g. medical_claim, revenue_figure, superlative_claim).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea className="min-h-[100px] font-mono text-sm bg-background border-border text-foreground"
+            placeholder={"medical_claim\nrevenue_figure\nsuperlative_claim"} value={claims} onChange={(e) => setClaims(e.target.value)} />
+        </CardContent>
+      </Card>
+      <Button onClick={() => update.mutate({ competitorNames: competitors, bannedPhrases: banned, flaggedClaimTypes: claims })}
+        disabled={update.isPending} className="bg-cyan-500 hover:bg-cyan-400 text-black">
+        <Save className="w-4 h-4 mr-2" />
+        Save Guardrail Config
+      </Button>
+    </div>
+  );
+}
+
+// ─── Approvers Tab ────────────────────────────────────────────────────────────
+function ApproversTab() {
+  const { data: configs, refetch } = trpc.admin.getApproverConfig.useQuery();
+  const update = trpc.admin.updateApproverConfig.useMutation({
+    onSuccess: () => { toast.success("Approver config saved"); refetch(); },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+  const [drafts, setDrafts] = useState<Record<string, { name: string; email: string }>>({});
+  useEffect(() => {
+    if (configs) {
+      const init: Record<string, { name: string; email: string }> = {};
+      for (const c of configs) init[c.approverRole] = { name: c.name, email: c.email };
+      setDrafts(init);
+    }
+  }, [configs]);
+
+  const roles: { key: "danny" | "david"; label: string; desc: string }[] = [
+    { key: "danny", label: "Danny", desc: "Approver for AA Company Page posts" },
+    { key: "david", label: "David", desc: "Approver for David Personal Page posts" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Approver Configuration</h2>
+        <p className="text-sm text-muted-foreground mt-1">Approval notification emails are sent to these addresses.</p>
+      </div>
+      {roles.map((r) => (
+        <Card key={r.key} className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-foreground">{r.label}</CardTitle>
+            <CardDescription>{r.desc}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Display Name</Label>
+                <Input className="bg-background border-border text-foreground"
+                  value={drafts[r.key]?.name ?? ""}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [r.key]: { ...d[r.key], name: e.target.value } }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Email Address</Label>
+                <Input type="email" className="bg-background border-border text-foreground"
+                  value={drafts[r.key]?.email ?? ""}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [r.key]: { ...d[r.key], email: e.target.value } }))} />
+              </div>
+            </div>
+            <Button size="sm"
+              onClick={() => update.mutate({ role: r.key, name: drafts[r.key]?.name ?? "", email: drafts[r.key]?.email ?? "" })}
+              disabled={update.isPending} className="bg-cyan-500 hover:bg-cyan-400 text-black">
+              <Save className="w-3.5 h-3.5 mr-1.5" />Save {r.label}
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+      <Card className="bg-card border-border border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm text-muted-foreground">Registered Team Members</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">Promote these members to admin via the Users tab after their first login.</p>
+          <div className="space-y-1.5 text-sm">
+            {[
+              { name: "Danny", email: "danny@absolute-aromas.com", role: "Admin (Approver)" },
+              { name: "David", email: "David@absolute-aromas.com", role: "Admin (Approver)" },
+              { name: "Harriet", email: "Harriet@absolute-aromas.com", role: "Pending first login" },
+              { name: "Amy Klaire", email: "AmyK@absolute-aromas.com", role: "Pending first login" },
+            ].map((m) => (
+              <div key={m.email} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                <div>
+                  <span className="text-foreground font-medium">{m.name}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">{m.email}</span>
+                </div>
+                <Badge variant="outline" className="text-xs border-border text-muted-foreground">{m.role}</Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Posting Rhythm Tab ───────────────────────────────────────────────────────
+function PostingRhythmTab() {
+  const { data: rhythms, refetch } = trpc.settings.listPostingRhythm.useQuery();
+  const upsert = trpc.settings.upsertPostingRhythm.useMutation({
+    onSuccess: () => { toast.success("Posting rhythm saved"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const [drafts, setDrafts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (rhythms) {
+      const init: Record<string, number> = {};
+      for (const r of rhythms) init[r.profile] = r.targetPerWeek;
+      setDrafts(init);
+    }
+  }, [rhythms]);
+
+  const profiles: { key: "aa_company" | "david_personal" | "blog_post"; label: string; desc: string }[] = [
+    { key: "aa_company", label: "AA Company Page", desc: "Target LinkedIn posts per week for the company page" },
+    { key: "david_personal", label: "David Personal Page", desc: "Target LinkedIn posts per week for David's personal page" },
+    { key: "blog_post", label: "Blog Posts", desc: "Target blog posts per week" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Posting Rhythm</h2>
+        <p className="text-sm text-muted-foreground mt-1">Set weekly posting targets per profile. Used to calculate the avg posts/week stat on the dashboard.</p>
+      </div>
+      <div className="grid gap-4">
+        {profiles.map((p) => (
+          <Card key={p.key} className="bg-card border-border">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{p.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{p.desc}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input type="number" min={0} max={20}
+                    className="w-20 text-center bg-background border-border text-foreground"
+                    value={drafts[p.key] ?? 0}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [p.key]: parseInt(e.target.value) || 0 }))} />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">per week</span>
+                  <Button size="sm"
+                    onClick={() => upsert.mutate({ profile: p.key, targetPerWeek: drafts[p.key] ?? 0 })}
+                    disabled={upsert.isPending} className="bg-cyan-500 hover:bg-cyan-400 text-black">
+                    <Save className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Users Tab ────────────────────────────────────────────────────────────────
 function UsersTab() {
   const usersQuery = trpc.admin.listUsers.useQuery();
   const setRoleMutation = trpc.admin.setUserRole.useMutation({
-    onSuccess: () => {
-      toast.success("Role updated.");
-      usersQuery.refetch();
-    },
+    onSuccess: () => { toast.success("Role updated."); usersQuery.refetch(); },
     onError: (err) => toast.error(err.message),
   });
-
   const users = usersQuery.data ?? [];
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2 mb-2">
-        <p className="text-sm text-muted-foreground">
-          Manage user roles. Admins can access the approval queue, guardrail review, and admin panel.
-          Standard users can only submit content ideas.
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">User Management</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Promote users to admin to grant approval access. Harriet and Amy Klaire will appear here after their first login.
         </p>
-        <div className="text-xs text-muted-foreground bg-muted/50 border border-border rounded-md px-3 py-2">
-          <p className="font-medium text-foreground mb-1">Team members to promote to Admin on first login:</p>
-          <ul className="space-y-0.5">
-            <li>David — David@absolute-aromas.com</li>
-            <li>Danny — danny@absolute-aromas.com</li>
-            <li>Harriet — Harriet@absolute-aromas.com</li>
-            <li>Amy Klaire — AmyK@absolute-aromas.com</li>
-          </ul>
-          <p className="mt-1 text-muted-foreground">Users appear here after their first login. Use the dropdown to set their role.</p>
-        </div>
       </div>
-
-      {usersQuery.isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="animate-spin text-muted-foreground" size={20} />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {users.map((user) => (
-            <Card key={user.id} className="border-border">
-              <CardContent className="py-3 px-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {(user.name ?? "U")[0].toUpperCase()}
-                    </span>
+      <Card className="bg-card border-border">
+        <CardContent className="pt-4">
+          {usersQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-cyan-500" size={20} /></div>
+          ) : users.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No users have logged in yet.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {users.map((u) => (
+                <div key={u.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{u.name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{u.email ?? u.openId}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{user.name ?? "Unknown"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email ?? user.openId}</p>
-                  </div>
-                  <Select
-                    value={user.role}
-                    onValueChange={(role) =>
-                      setRoleMutation.mutate({ userId: user.id, role: role as "user" | "admin" })
-                    }
-                  >
-                    <SelectTrigger className="w-28 h-8 text-xs">
+                  <Select value={u.role}
+                    onValueChange={(role) => setRoleMutation.mutate({ userId: u.id, role: role as "user" | "admin" })}>
+                    <SelectTrigger className="w-28 h-8 text-xs bg-background border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -197,106 +330,68 @@ function UsersTab() {
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function ApproverConfigTab() {
-  const configQuery = trpc.admin.getApproverConfig.useQuery();
-  const updateMutation = trpc.admin.updateApproverConfig.useMutation({
-    onSuccess: () => {
-      toast.success("Approver config updated.");
-      configQuery.refetch();
-    },
-    onError: (err) => toast.error(err.message),
-  });
+// ─── Main AdminPage ───────────────────────────────────────────────────────────
+export default function AdminPage() {
+  const { user, isAuthenticated, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabId>("style-guides");
 
-  const configs = configQuery.data ?? [];
+  if (loading) return (
+    <AppLayout>
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-6 h-6 animate-spin text-cyan-500" />
+      </div>
+    </AppLayout>
+  );
 
-  const [editValues, setEditValues] = useState<Record<string, { name: string; email: string }>>({});
-
-  const getValues = (approverRole: string, defaults: { name: string; email: string }) => {
-    return editValues[approverRole] ?? defaults;
-  };
+  if (!isAuthenticated || user?.role !== "admin") return (
+    <AppLayout>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <AlertTriangle className="w-8 h-8 text-amber-400" />
+        <p className="text-muted-foreground">Admin access required.</p>
+      </div>
+    </AppLayout>
+  );
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Configure the name and email address for each approver. These are used for approval routing
-        and email notifications.
-      </p>
+    <AppLayout>
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Settings className="w-5 h-5 text-cyan-500" />
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Admin Settings</h1>
+            <p className="text-sm text-muted-foreground">Manage style guides, guardrails, approvers, and posting targets</p>
+          </div>
+        </div>
 
-      {configQuery.isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="animate-spin text-muted-foreground" size={20} />
+        <div className="flex gap-1 mb-6 bg-card border border-border rounded-lg p-1">
+          {TABS.map((t) => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex-1 justify-center ${
+                activeTab === t.id
+                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}>
+              {t.icon}
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          ))}
         </div>
-      ) : (
-        <div className="space-y-4">
-          {configs.map((config) => {
-            const vals = getValues(config.approverRole, { name: config.name, email: config.email });
-            return (
-              <Card key={config.approverRole} className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm capitalize">
-                    {config.approverRole === "david" ? "David Tomlinson" : "Danny Tomlinson"}
-                    <Badge variant="outline" className="ml-2 text-xs capitalize">{config.approverRole}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Display Name</Label>
-                    <Input
-                      value={vals.name}
-                      onChange={(e) =>
-                        setEditValues((prev) => ({
-                          ...prev,
-                          [config.approverRole]: { ...vals, name: e.target.value },
-                        }))
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Email Address</Label>
-                    <Input
-                      type="email"
-                      value={vals.email}
-                      onChange={(e) =>
-                        setEditValues((prev) => ({
-                          ...prev,
-                          [config.approverRole]: { ...vals, email: e.target.value },
-                        }))
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      updateMutation.mutate({
-                        role: config.approverRole as "danny" | "david",
-                        name: vals.name,
-                        email: vals.email,
-                      })
-                    }
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? (
-                      <Loader2 size={13} className="mr-1.5 animate-spin" />
-                    ) : null}
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
+
+        {activeTab === "style-guides" && <StyleGuidesTab />}
+        {activeTab === "guardrails" && <GuardrailsTab />}
+        {activeTab === "approvers" && <ApproversTab />}
+        {activeTab === "rhythm" && <PostingRhythmTab />}
+        {activeTab === "users" && <UsersTab />}
+      </div>
+    </AppLayout>
   );
 }

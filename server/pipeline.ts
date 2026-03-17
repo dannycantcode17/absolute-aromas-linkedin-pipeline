@@ -2,12 +2,12 @@
  * Pipeline Orchestration Service
  *
  * Coordinates the full generation lifecycle:
- * 1. Fetch live style guide from Notion
- * 2. Generate post variants via Claude
+ * 1. Fetch style guide from DB (in-app editable, replaces Notion fetch)
+ * 2. Generate post/blog variants via Claude
  * 3. Run guardrail checks on every variant
  * 4. Store results and route to approver
  *
- * This module is called from tRPC procedures and the retry worker.
+ * Supports three profiles: aa_company | david_personal | blog_post
  */
 
 import { nanoid } from "nanoid";
@@ -18,17 +18,16 @@ import {
   createPost,
   getApproverConfig,
   getJobById,
+  getStyleGuideForProfile,
   supersedePreviousIterations,
   updateJobStatus,
 } from "./db";
 import { sendApprovalEmail } from "./email";
 import { generatePostVariants } from "./generation";
 import { runGuardrails } from "./guardrails";
-import { fetchStyleGuide, NotionUnavailableError } from "./notion";
 
 export interface PipelineRunOptions {
   jobId: number;
-  notionApiKey: string;
   appBaseUrl: string;
   editFeedback?: string;
   variantCount?: number;
@@ -43,42 +42,39 @@ export interface PipelineResult {
 }
 
 export async function runGenerationPipeline(options: PipelineRunOptions): Promise<PipelineResult> {
-  const { jobId, notionApiKey, appBaseUrl, editFeedback, variantCount = 3 } = options;
+  const { jobId, appBaseUrl, editFeedback } = options;
 
   const job = await getJobById(jobId);
   if (!job) return { success: false, status: "error", message: `Job ${jobId} not found` };
 
-  // ── Step 1: Fetch live style guide ────────────────────────────────────────
-  let styleGuideText: string;
-  try {
-    styleGuideText = await fetchStyleGuide(notionApiKey);
+  // Blog posts always get 2 variants; LinkedIn posts default to 3
+  const variantCount = options.variantCount ?? (job.profile === "blog_post" ? 2 : 3);
+
+  // ── Step 1: Fetch style guide from DB ─────────────────────────────────────
+  const styleGuideRow = await getStyleGuideForProfile(job.profile);
+  const styleGuideText = styleGuideRow?.content ?? "";
+
+  if (!styleGuideText) {
+    // No style guide configured yet — still proceed but log the gap
+    await addAuditEntry({
+      jobId,
+      actor: "system",
+      action: "style_guide_fetch_failed",
+      details: { error: `No style guide configured for profile: ${job.profile}` },
+    });
+    // We don't block generation — the system prompts carry the brand voice
+  } else {
     await addAuditEntry({
       jobId,
       actor: "system",
       action: "style_guide_fetched",
-      details: { pageId: "326362aad87381b89061e17c31c38873" },
+      details: { profile: job.profile, source: "database" },
     });
-  } catch (err) {
-    if (err instanceof NotionUnavailableError) {
-      await updateJobStatus(jobId, "pending_style_guide");
-      await addAuditEntry({
-        jobId,
-        actor: "system",
-        action: "style_guide_fetch_failed",
-        details: { error: err.message },
-      });
-      return {
-        success: false,
-        status: "pending_style_guide",
-        message: `Notion unavailable: ${err.message}. Job queued for retry.`,
-      };
-    }
-    throw err;
   }
 
   // ── Step 2: Mark as generating ────────────────────────────────────────────
   await updateJobStatus(jobId, "generating", {
-    styleGuideSnapshot: styleGuideText.slice(0, 10000), // store first 10k chars
+    styleGuideSnapshot: styleGuideText.slice(0, 10000),
     generationAttempts: (job.generationAttempts ?? 0) + 1,
   });
 
@@ -101,12 +97,16 @@ export async function runGenerationPipeline(options: PipelineRunOptions): Promis
       styleGuideText,
       editFeedback,
       variantCount,
+      // Blog-specific fields
+      blogKeyword: job.blogKeyword ?? undefined,
+      blogTone: (job.blogTone as "educational" | "thought_leadership" | "story_driven") ?? undefined,
+      blogWordCount: (job.blogWordCount as "short" | "standard" | "long") ?? undefined,
     });
     await addAuditEntry({
       jobId,
       actor: "system",
       action: "variants_generated",
-      details: { count: variants.length, editFeedback: editFeedback ?? null },
+      details: { count: variants.length, editFeedback: editFeedback ?? null, profile: job.profile },
     });
   } catch (err) {
     await updateJobStatus(jobId, "pending_style_guide");
@@ -145,8 +145,6 @@ export async function runGenerationPipeline(options: PipelineRunOptions): Promis
       editFeedback: editFeedback ?? null,
     });
 
-    // We need the post ID to create guardrail reviews
-    // Re-fetch the post we just created by querying the latest for this job/variant
     const { getActivePostsByJobId } = await import("./db");
     const activePosts = await getActivePostsByJobId(jobId);
     const thisPost = activePosts.find(
@@ -184,16 +182,13 @@ export async function runGenerationPipeline(options: PipelineRunOptions): Promis
     return { success: false, status: "error", message: "Approver config not found" };
   }
 
-  // Generate a secure approval token
   const token = nanoid(48);
   await createApprovalToken(jobId, job.requiredApprover, token);
 
-  // Get the generated posts for the email
   const { getActivePostsByJobId: getActivePosts } = await import("./db");
   const activePosts = await getActivePosts(jobId);
   const currentPosts = activePosts.filter((p) => p.iteration === iteration);
 
-  // Mark posts as pending_approval
   for (const post of currentPosts) {
     const { updatePostStatus } = await import("./db");
     await updatePostStatus(post.id, "pending_approval");

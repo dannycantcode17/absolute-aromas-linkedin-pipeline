@@ -447,8 +447,12 @@ export default function QueuePage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
                                 <Badge className="bg-cyan-500/15 text-cyan-400 text-xs">Published</Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {job.profile === "aa_company" ? "AA Company" : "David Personal"}
+                                <span className={`text-xs font-medium ${
+                                  job.profile === "aa_company" ? "text-cyan-400" :
+                                  job.profile === "david_personal" ? "text-amber-400" :
+                                  "text-violet-400"
+                                }`}>
+                                  {job.profile === "aa_company" ? "LinkedIn · AA" : job.profile === "david_personal" ? "LinkedIn · David" : "Blog Post"}
                                 </span>
                               </div>
                               <p className="text-sm text-foreground truncate">{job.topic}</p>
