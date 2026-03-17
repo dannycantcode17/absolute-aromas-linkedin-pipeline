@@ -1,0 +1,329 @@
+{
+  "query": "SHOW COLUMNS FROM jobs; SHOW COLUMNS FROM posts; SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute SHOW COLUMNS FROM jobs; SHOW COLUMNS FROM posts; SHOW TABLES;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "submittedById",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "profile",
+      "Type": "enum('aa_company','david_personal','blog_post')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "contentPillar",
+      "Type": "varchar(128)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "topic",
+      "Type": "text",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "referenceUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "namedClientFlag",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "namedClientConfirmed",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "targetAudience",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "toneHint",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('pending_confirmation','pending_style_guide','generating','pending_guardrail','pending_approval','approved','rejected','published')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "pending_style_guide",
+      "Extra": ""
+    },
+    {
+      "Field": "requiredApprover",
+      "Type": "enum('danny','david')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "styleGuideSnapshot",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "generationAttempts",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "blogKeyword",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "blogTone",
+      "Type": "enum('educational','thought_leadership','story_driven')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "blogWordCount",
+      "Type": "enum('short','standard','long')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "Field",
+      "Type": "Type",
+      "Null": "Null",
+      "Key": "Key",
+      "Default": "Default",
+      "Extra": "Extra"
+    },
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "jobId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "variantLabel",
+      "Type": "varchar(4)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "content",
+      "Type": "text",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "iteration",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('draft','flagged','pending_approval','approved','rejected','superseded')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "draft",
+      "Extra": ""
+    },
+    {
+      "Field": "guardrailFlags",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "approvedBy",
+      "Type": "varchar(64)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "approvedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "rejectionReason",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "editFeedback",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "suggestedPublishDate",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "publishedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "publishedBy",
+      "Type": "varchar(64)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "linkedInUrl",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "publicationStatus",
+      "Type": "enum('queued','pending_confirm','confirmed')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "queued",
+      "Extra": ""
+    }
+  ],
+  "messages": [
+    "Tables_in_9w9MUqAiwr2AU8wMzatFxY",
+    "__drizzle_migrations",
+    "approval_tokens",
+    "approver_config",
+    "audit_log",
+    "guardrail_config",
+    "guardrail_reviews",
+    "idea_batches",
+    "ideas",
+    "jobs",
+    "posting_rhythm",
+    "posts",
+    "style_guides",
+    "users"
+  ],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nsubmittedById\tint\tNO\t\tNULL\t\nprofile\tenum('aa_company','david_personal','blog_post')\tNO\t\tNULL\t\ncontentPillar\tvarchar(128)\tNO\t\tNULL\t\ntopic\ttext\tNO\t\tNULL\t\nreferenceUrl\ttext\tYES\t\tNULL\t\nnamedClientFlag\ttinyint(1)\tNO\t\t0\t\nnamedClientConfirmed\ttinyint(1)\tNO\t\t0\t\ntargetAudience\ttext\tYES\t\tNULL\t\ntoneHint\ttext\tYES\t\tNULL\t\nstatus\tenum('pending_confirmation','pending_style_guide','generating','pending_guardrail','pending_approval','approved','rejected','published')\tNO\t\tpending_style_guide\t\nrequiredApprover\tenum('danny','david')\tNO\t\tNULL\t\nstyleGuideSnapshot\ttext\tYES\t\tNULL\t\ngenerationAttempts\tint\tNO\t\t0\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nblogKeyword\tvarchar(255)\tYES\t\tNULL\t\nblogTone\tenum('educational','thought_leadership','story_driven')\tYES\t\tNULL\t\nblogWordCount\tenum('short','standard','long')\tYES\t\tNULL\t\nField\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\njobId\tint\tNO\t\tNULL\t\nvariantLabel\tvarchar(4)\tNO\t\tNULL\t\ncontent\ttext\tNO\t\tNULL\t\niteration\tint\tNO\t\t1\t\nstatus\tenum('draft','flagged','pending_approval','approved','rejected','superseded')\tNO\t\tdraft\t\nguardrailFlags\tjson\tYES\t\tNULL\t\napprovedBy\tvarchar(64)\tYES\t\tNULL\t\napprovedAt\ttimestamp\tYES\t\tNULL\t\nrejectionReason\ttext\tYES\t\tNULL\t\neditFeedback\ttext\tYES\t\tNULL\t\nsuggestedPublishDate\ttimestamp\tYES\t\tNULL\t\npublishedAt\ttimestamp\tYES\t\tNULL\t\npublishedBy\tvarchar(64)\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nlinkedInUrl\ttext\tYES\t\tNULL\t\npublicationStatus\tenum('queued','pending_confirm','confirmed')\tYES\t\tqueued\t\nTables_in_9w9MUqAiwr2AU8wMzatFxY\n__drizzle_migrations\napproval_tokens\napprover_config\naudit_log\nguardrail_config\nguardrail_reviews\nidea_batches\nideas\njobs\nposting_rhythm\nposts\nstyle_guides\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 66
+}

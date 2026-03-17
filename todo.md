@@ -126,3 +126,6 @@
 - [ ] Dashboard calendar: purple/violet colour for Blog posts (third colour)
 - [ ] Dashboard pillar chart: separate LinkedIn vs Blog post types
 - [ ] Post History: "Blog" type badge, "View full post" expand showing title + meta + body
+
+## V5 Bug Fix
+- [x] Bug: Live database missing v5 schema migrations — applied all missing columns and tables directly to production DB (blogKeyword, blogTone, blogWordCount, blog_post enum, style_guides, guardrail_config, posting_rhythm, idea_batches, ideas tables)
