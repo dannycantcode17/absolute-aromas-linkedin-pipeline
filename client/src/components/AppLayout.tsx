@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={15} />, matchPrefix: "/dashboard" },
   { label: "Idea Generator", href: "/ideas", icon: <Sparkles size={15} /> },
   { label: "Submit Post", href: "/submit", icon: <PenLine size={15} /> },
-  { label: "Approval Queue", href: "/approval", icon: <CheckSquare size={15} />, adminOnly: true },
+  { label: "Approval Queue", href: "/approval-queue", icon: <CheckSquare size={15} />, adminOnly: true },
   { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={15} />, adminOnly: true },
   { label: "Guardrail Review", href: "/guardrails", icon: <AlertTriangle size={15} />, adminOnly: true },
   { label: "Post History", href: "/history", icon: <History size={15} />, adminOnly: true },
@@ -55,7 +55,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
   });
   const pendingGuardrailCount = pendingGuardrailsQuery.data?.length ?? 0;
 
-  const pendingApprovalQuery = trpc.jobs.list.useQuery(undefined, {
+  const pendingApprovalQuery = trpc.approval.listPending.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
     refetchInterval: 30000,
   });
@@ -169,7 +169,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
                   {pendingGuardrailCount}
                 </Badge>
               )}
-              {item.href === "/approval" && pendingApprovalCount > 0 && (
+              {item.href === "/approval-queue" && pendingApprovalCount > 0 && (
                 <Badge className="ml-auto bg-amber-500/80 text-white text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center">
                   {pendingApprovalCount}
                 </Badge>

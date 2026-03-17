@@ -129,3 +129,6 @@
 
 ## V5 Bug Fix
 - [x] Bug: Live database missing v5 schema migrations — applied all missing columns and tables directly to production DB (blogKeyword, blogTone, blogWordCount, blog_post enum, style_guides, guardrail_config, posting_rhythm, idea_batches, ideas tables)
+
+## V5 Routing Bug Fix
+- [x] Bug: Approval Queue sidebar link goes to /approval (token-based page) instead of a queue list — created ApprovalQueuePage at /approval-queue showing all pending-approval jobs, fixed sidebar nav and badge counter
