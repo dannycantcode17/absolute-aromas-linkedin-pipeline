@@ -1,0 +1,340 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { trpc } from "@/lib/trpc";
+import { useParams } from "wouter";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+  CheckCircle,
+  XCircle,
+  Edit3,
+  Copy,
+  Check,
+  Loader2,
+  Leaf,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
+
+export default function ApprovalPage() {
+  const { token } = useParams<{ token: string }>();
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [editFeedback, setEditFeedback] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [mode, setMode] = useState<"review" | "edit" | "reject" | "done">("review");
+  const [doneMessage, setDoneMessage] = useState("");
+
+  const approvalQuery = trpc.approval.getByToken.useQuery(
+    { token: token ?? "" },
+    { enabled: !!token }
+  );
+
+  const approveMutation = trpc.approval.approve.useMutation({
+    onSuccess: (data) => {
+      setDoneMessage(data.message);
+      setMode("done");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const editMutation = trpc.approval.requestEdit.useMutation({
+    onSuccess: (data) => {
+      setDoneMessage(data.message);
+      setMode("done");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const rejectMutation = trpc.approval.reject.useMutation({
+    onSuccess: (data) => {
+      setDoneMessage(data.message);
+      setMode("done");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const copyToClipboard = async (text: string, postId: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(postId);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  if (!token) {
+    return <ErrorScreen message="Invalid approval link." />;
+  }
+
+  if (approvalQuery.isLoading) {
+    return (
+      <LoadingScreen />
+    );
+  }
+
+  if (approvalQuery.error) {
+    return <ErrorScreen message={approvalQuery.error.message} />;
+  }
+
+  if (mode === "done") {
+    return (
+      <SuccessScreen message={doneMessage} />
+    );
+  }
+
+  const { job, posts, approverRole } = approvalQuery.data!;
+  const profileLabel = job.profile === "aa_company" ? "Absolute Aromas Company Page" : "David Tomlinson Personal Page";
+  const approverName = approverRole === "david" ? "David" : "Danny";
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card sticky top-0 z-10">
+        <div className="container py-3 flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <Leaf size={14} className="text-primary-foreground" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-foreground leading-tight">Absolute Aromas</p>
+            <p className="text-xs text-muted-foreground leading-tight">LinkedIn Post Approval</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="container py-6 max-w-2xl">
+        {/* Intro */}
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-foreground mb-1">Review LinkedIn Post</h1>
+          <p className="text-sm text-muted-foreground">
+            Hi {approverName}, please review the variants below and choose an action.
+          </p>
+        </div>
+
+        {/* Job context */}
+        <Card className="mb-6">
+          <CardContent className="pt-4 pb-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Profile</p>
+                <p className="font-medium">{profileLabel}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Content Pillar</p>
+                <p className="font-medium">{job.contentPillar}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground">Topic</p>
+                <p className="font-medium">{job.topic}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {approverRole === "david" && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <Info size={14} className="text-blue-600" />
+            <AlertDescription className="text-blue-800 text-sm">
+              These posts are for your personal LinkedIn page. Only you can approve them.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Post variants */}
+        <div className="space-y-4 mb-6">
+          <h2 className="text-sm font-semibold text-foreground">Post Variants — select one to approve</h2>
+          {posts.map((post) => (
+            <Card
+              key={post.id}
+              onClick={() => setSelectedPostId(post.id)}
+              className={`cursor-pointer transition-all border-2 ${
+                selectedPostId === post.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/40"
+              }`}
+            >
+              <CardHeader className="pb-2 pt-3 px-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">Variant {post.variantLabel}</span>
+                    {selectedPostId === post.id && (
+                      <Badge className="bg-primary text-primary-foreground text-xs">Selected</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={(e) => { e.stopPropagation(); copyToClipboard(post.content, post.id); }}
+                  >
+                    {copiedId === post.id ? (
+                      <Check size={13} className="text-green-600" />
+                    ) : (
+                      <Copy size={13} />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                  {post.content}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Actions */}
+        {mode === "review" && (
+          <div className="space-y-3">
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+              disabled={!selectedPostId || approveMutation.isPending}
+              onClick={() => {
+                if (!selectedPostId) return;
+                approveMutation.mutate({ token: token!, postId: selectedPostId });
+              }}
+            >
+              {approveMutation.isPending ? (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              ) : (
+                <CheckCircle size={16} className="mr-2" />
+              )}
+              Approve Selected Variant
+            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setMode("edit")}
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <Edit3 size={16} className="mr-2" />
+                Request Edits
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setMode("reject")}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <XCircle size={16} className="mr-2" />
+                Reject
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Approving moves the post to the Ready to Post queue. It will not be published automatically.
+            </p>
+          </div>
+        )}
+
+        {mode === "edit" && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-amber-900">Request Edits</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="feedback" className="text-amber-900">
+                  Feedback for the AI
+                </Label>
+                <Textarea
+                  id="feedback"
+                  value={editFeedback}
+                  onChange={(e) => setEditFeedback(e.target.value)}
+                  placeholder="Describe what needs to change. Be specific — e.g. 'Make it shorter', 'Lead with the GC-MS testing angle', 'Remove the pricing reference in variant B'..."
+                  rows={4}
+                  className="bg-white"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  disabled={editFeedback.trim().length < 10 || editMutation.isPending}
+                  onClick={() => editMutation.mutate({ token: token!, feedback: editFeedback })}
+                >
+                  {editMutation.isPending ? <Loader2 size={14} className="mr-2 animate-spin" /> : null}
+                  Send Feedback & Regenerate
+                </Button>
+                <Button variant="outline" onClick={() => setMode("review")}>Cancel</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {mode === "reject" && (
+          <Card className="border-red-200 bg-red-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-red-900">Reject Post</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="reason" className="text-red-900">Reason for rejection</Label>
+                <Textarea
+                  id="reason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Briefly explain why this post is being rejected..."
+                  rows={3}
+                  className="bg-white"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  disabled={rejectReason.trim().length < 5 || rejectMutation.isPending}
+                  onClick={() => rejectMutation.mutate({ token: token!, reason: rejectReason })}
+                >
+                  {rejectMutation.isPending ? <Loader2 size={14} className="mr-2 animate-spin" /> : null}
+                  Confirm Rejection
+                </Button>
+                <Button variant="outline" onClick={() => setMode("review")}>Cancel</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center">
+        <Leaf className="text-primary mx-auto mb-3 animate-pulse" size={32} />
+        <p className="text-muted-foreground text-sm">Loading approval request...</p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center max-w-sm px-4">
+        <AlertTriangle className="text-destructive mx-auto mb-3" size={32} />
+        <h1 className="text-lg font-semibold text-foreground mb-2">Unable to load approval</h1>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function SuccessScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center max-w-sm px-4">
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="text-green-600" size={28} />
+        </div>
+        <h1 className="text-lg font-semibold text-foreground mb-2">Done</h1>
+        <p className="text-sm text-muted-foreground">{message}</p>
+        <p className="text-xs text-muted-foreground mt-4">You can close this window.</p>
+      </div>
+    </div>
+  );
+}

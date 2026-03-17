@@ -1,17 +1,18 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  int,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  boolean,
+  json,
+} from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
+// ─── Users ───────────────────────────────────────────────────────────────────
+
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +26,200 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// ─── Submission Jobs ──────────────────────────────────────────────────────────
+// A "job" is a content request submitted via the form.
+// One job → multiple post drafts (variants).
+
+export const jobs = mysqlTable("jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  submittedById: int("submittedById").notNull(), // FK → users.id
+  /** "aa_company" | "david_personal" */
+  profile: mysqlEnum("profile", ["aa_company", "david_personal"]).notNull(),
+  /** Content pillar from the style guide */
+  contentPillar: varchar("contentPillar", { length: 128 }).notNull(),
+  /** Free-text topic / idea / angle */
+  topic: text("topic").notNull(),
+  /** Optional reference URL provided by submitter */
+  referenceUrl: text("referenceUrl"),
+  /** If true, a secondary confirmation step is required before generation */
+  namedClientFlag: boolean("namedClientFlag").default(false).notNull(),
+  /** Confirmed that named client usage is intentional */
+  namedClientConfirmed: boolean("namedClientConfirmed").default(false).notNull(),
+  /** Target audience hint (optional) */
+  targetAudience: text("targetAudience"),
+  /** Tone hint (optional) */
+  toneHint: text("toneHint"),
+  /**
+   * Job lifecycle:
+   * pending_confirmation → waiting for named-client secondary confirmation
+   * pending_style_guide  → Notion unreachable, queued for retry
+   * generating           → Claude is running
+   * pending_guardrail    → guardrail flags need manual review
+   * pending_approval     → drafts sent to approver
+   * approved             → one variant approved, in ready queue
+   * rejected             → rejected by approver
+   * published            → manually marked published
+   */
+  status: mysqlEnum("status", [
+    "pending_confirmation",
+    "pending_style_guide",
+    "generating",
+    "pending_guardrail",
+    "pending_approval",
+    "approved",
+    "rejected",
+    "published",
+  ])
+    .default("pending_style_guide")
+    .notNull(),
+  /** Which approver must approve this job — enforced server-side */
+  requiredApprover: mysqlEnum("requiredApprover", ["danny", "david"]).notNull(),
+  /** Snapshot of the style guide text used for this generation */
+  styleGuideSnapshot: text("styleGuideSnapshot"),
+  /** Number of generation attempts (for retry tracking) */
+  generationAttempts: int("generationAttempts").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Job = typeof jobs.$inferSelect;
+export type InsertJob = typeof jobs.$inferInsert;
+
+// ─── Post Drafts ─────────────────────────────────────────────────────────────
+// Each job generates multiple variants. One variant gets approved.
+
+export const posts = mysqlTable("posts", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId").notNull(), // FK → jobs.id
+  /** Variant label: "A", "B", "C", "D", "E" */
+  variantLabel: varchar("variantLabel", { length: 4 }).notNull(),
+  /** The generated post text */
+  content: text("content").notNull(),
+  /** Generation iteration — increments on each edit/regenerate cycle */
+  iteration: int("iteration").default(1).notNull(),
+  /**
+   * draft          → generated, not yet reviewed
+   * flagged        → guardrail issue detected, held for review
+   * pending_approval → sent to approver
+   * approved       → approver accepted
+   * rejected       → approver rejected
+   * superseded     → replaced by a newer iteration
+   */
+  status: mysqlEnum("status", [
+    "draft",
+    "flagged",
+    "pending_approval",
+    "approved",
+    "rejected",
+    "superseded",
+  ])
+    .default("draft")
+    .notNull(),
+  /** Guardrail flags detected on this variant (JSON array of flag objects) */
+  guardrailFlags: json("guardrailFlags").$type<GuardrailFlag[]>(),
+  /** Approver who approved/rejected (must match job.requiredApprover) */
+  approvedBy: varchar("approvedBy", { length: 64 }),
+  approvedAt: timestamp("approvedAt"),
+  /** Rejection reason if rejected */
+  rejectionReason: text("rejectionReason"),
+  /** Edit feedback from approver that triggered regeneration */
+  editFeedback: text("editFeedback"),
+  /** Suggested publish date set by approver */
+  suggestedPublishDate: timestamp("suggestedPublishDate"),
+  /** When the post was manually marked as published */
+  publishedAt: timestamp("publishedAt"),
+  /** Who marked it published */
+  publishedBy: varchar("publishedBy", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Post = typeof posts.$inferSelect;
+export type InsertPost = typeof posts.$inferInsert;
+
+// ─── Guardrail Flags ──────────────────────────────────────────────────────────
+// Stored inline as JSON on posts, but also as a separate table for querying.
+
+export type GuardrailFlag = {
+  type:
+    | "medical_claim"
+    | "competitor_name"
+    | "competitor_mention"
+    | "revenue_figure"
+    | "named_client"
+    | "auto_publish_trigger"
+    | "financial_projection"
+    | "political_content"
+    | "superlative_claim"
+    | "tone_violation";
+  severity: "block" | "warn";
+  excerpt: string;
+  description: string;
+};
+
+export const guardrailReviews = mysqlTable("guardrail_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(), // FK → posts.id
+  flagType: varchar("flagType", { length: 64 }).notNull(),
+  severity: mysqlEnum("severity", ["block", "warn"]).notNull(),
+  excerpt: text("excerpt").notNull(),
+  description: text("description").notNull(),
+  /** resolved = manually cleared by admin; auto_cleared = AI re-check passed */
+  resolution: mysqlEnum("resolution", ["pending", "resolved", "auto_cleared"]).default("pending").notNull(),
+  resolvedBy: varchar("resolvedBy", { length: 64 }),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GuardrailReview = typeof guardrailReviews.$inferSelect;
+
+// ─── Approval Tokens ─────────────────────────────────────────────────────────
+// Secure one-time tokens embedded in approval emails.
+
+export const approvalTokens = mysqlTable("approval_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  jobId: int("jobId").notNull(),
+  /** Which approver this token is valid for */
+  approverRole: mysqlEnum("approverRole", ["danny", "david"]).notNull(),
+  /** Whether the token has been consumed */
+  used: boolean("used").default(false).notNull(),
+  /** Token expires after 7 days */
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ApprovalToken = typeof approvalTokens.$inferSelect;
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+// Every state transition recorded here. Also synced to Notion.
+
+export const auditLog = mysqlTable("audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId"),
+  postId: int("postId"),
+  /** Actor: user name or "system" */
+  actor: varchar("actor", { length: 128 }).notNull(),
+  action: varchar("action", { length: 64 }).notNull(),
+  /** JSON payload with before/after state */
+  details: json("details"),
+  /** Whether this entry has been synced to Notion */
+  notionSynced: boolean("notionSynced").default(false).notNull(),
+  notionPageId: varchar("notionPageId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+
+// ─── Approver Config ──────────────────────────────────────────────────────────
+// Stores email addresses for Danny and David (admin-configurable).
+
+export const approverConfig = mysqlTable("approver_config", {
+  id: int("id").autoincrement().primaryKey(),
+  approverRole: mysqlEnum("approverRole", ["danny", "david"]).notNull().unique(),
+  name: varchar("name", { length: 128 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ApproverConfig = typeof approverConfig.$inferSelect;
