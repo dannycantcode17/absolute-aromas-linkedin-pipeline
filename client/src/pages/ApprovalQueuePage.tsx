@@ -46,6 +46,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function ApprovalQueuePage() {
   const { data: pendingJobs, isLoading } = trpc.approval.listPending.useQuery();
+  const { data: approverNames } = trpc.settings.getApproverNames.useQuery();
 
   const jobs = pendingJobs ?? [];
   type Job = NonNullable<typeof pendingJobs>[number];
@@ -99,7 +100,7 @@ export default function ApprovalQueuePage() {
                 </h2>
                 <div className="space-y-2">
                   {guardrailReview.map((job: Job) => (
-                    <JobCard key={job.id} job={job} />
+                    <JobCard key={job.id} job={job} approverNames={approverNames} />
                   ))}
                 </div>
               </div>
@@ -113,7 +114,7 @@ export default function ApprovalQueuePage() {
                 </h2>
                 <div className="space-y-2">
                   {awaitingApproval.map((job: Job) => (
-                    <JobCard key={job.id} job={job} />
+                    <JobCard key={job.id} job={job} approverNames={approverNames} />
                   ))}
                 </div>
               </div>
@@ -135,7 +136,7 @@ interface JobCardProps {
   createdAt: Date;
 }
 
-function JobCard({ job }: { job: JobCardProps }) {
+function JobCard({ job, approverNames }: { job: JobCardProps; approverNames?: { danny: string; david: string } }) {
   return (
     <Link href={`/jobs/${job.id}`}>
       <div className="rounded-lg border border-white/5 bg-[#1a1d27] hover:border-cyan-500/30 hover:bg-[#1e2235] transition-all cursor-pointer group">
@@ -162,8 +163,10 @@ function JobCard({ job }: { job: JobCardProps }) {
               <span className="text-xs text-slate-600">·</span>
               <span className="text-xs text-slate-500">{job.contentPillar}</span>
               <span className="text-xs text-slate-600">·</span>
-              <span className="text-xs text-slate-500 capitalize">
-                Approver: {job.requiredApprover}
+              <span className="text-xs text-slate-500">
+                Approver: {job.requiredApprover === "david"
+                  ? (approverNames?.david ?? "David")
+                  : (approverNames?.danny ?? "Danny")}
               </span>
             </div>
             <p className="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">

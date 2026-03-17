@@ -21,6 +21,12 @@ import { useLocation } from "wouter";
 import { AlertTriangle, Loader2, PenLine, Info, ChevronDown, ChevronUp, CheckCircle2, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 
+/** Pull approver names from DB so they are never hardcoded in the UI */
+function useApproverNames() {
+  const { data } = trpc.settings.getApproverNames.useQuery();
+  return { danny: data?.danny ?? "the AA Company approver", david: data?.david ?? "David" };
+}
+
 const AA_PILLARS = [
   "Manufacturer Authority",
   "Private Label Education",
@@ -50,6 +56,7 @@ const BLOG_PILLARS = [
 
 export default function SubmitJob() {
   const [, navigate] = useLocation();
+  const approverNames = useApproverNames();
   const [profile, setProfile] = useState<"aa_company" | "david_personal" | "blog_post" | "">("");
   const [contentPillar, setContentPillar] = useState("");
   const [topic, setTopic] = useState("");
@@ -249,7 +256,7 @@ export default function SubmitJob() {
                   { step: "Fill in the form below", detail: "Choose the profile, content pillar, and describe your idea. The more detail you give, the better Claude's output." },
                   { step: "Claude generates variants", detail: "The AI fetches the live Absolute Aromas style guide from Notion and produces 3–5 distinct post drafts tailored to the chosen profile's voice." },
                   { step: "Guardrail checks run automatically", detail: "Every draft is checked against 6 brand compliance rules (medical claims, revenue figures, competitor names, etc.). Flagged posts go to Guardrail Review before the approver sees them." },
-                  { step: "Approver receives an email", detail: "Danny (for AA Company posts) or David (for his personal page) gets an email with all drafts and a one-click approve button." },
+                  { step: "Approver receives an email", detail: `${approverNames.danny} (for AA Company posts) or ${approverNames.david} (for their personal page) gets an email with all drafts and a one-click approve button.` },
                   { step: "Approved posts land in the queue", detail: "Once approved, the post appears in Ready-to-Post. Copy it, paste it into LinkedIn, then confirm publication with the LinkedIn URL." },
                 ].map(({ step, detail }, i) => (
                   <li key={i} className="flex gap-3 text-sm">
@@ -289,7 +296,7 @@ export default function SubmitJob() {
                   }`}
                 >
                   <p className="font-medium text-sm text-foreground">AA Company Page</p>
-                  <p className="text-xs text-muted-foreground mt-1">Brand voice — approved by Danny</p>
+                  <p className="text-xs text-muted-foreground mt-1">Brand voice — approved by {approverNames.danny}</p>
                 </button>
                 <button
                   type="button"
@@ -301,7 +308,7 @@ export default function SubmitJob() {
                   }`}
                 >
                   <p className="font-medium text-sm text-foreground">David Personal Page</p>
-                  <p className="text-xs text-muted-foreground mt-1">David's voice — approved by David only</p>
+                  <p className="text-xs text-muted-foreground mt-1">{approverNames.david}'s voice — approved by {approverNames.david} only</p>
                 </button>
                 <button
                   type="button"
@@ -320,7 +327,7 @@ export default function SubmitJob() {
                 <Alert className="border-primary/30 bg-primary/8">
                   <Info size={14} className="text-primary" />
                   <AlertDescription className="text-muted-foreground text-xs">
-                    Posts for David's personal page can only be approved by David. Danny cannot approve these.
+                    Posts for {approverNames.david}'s personal page can only be approved by {approverNames.david}. {approverNames.danny} cannot approve these.
                   </AlertDescription>
                 </Alert>
               )}

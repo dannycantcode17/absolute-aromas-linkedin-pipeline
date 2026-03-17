@@ -197,6 +197,7 @@ export default function ApprovalPage() {
     { token: token ?? "" },
     { enabled: !!token }
   );
+  const { data: approverNames } = trpc.settings.getApproverNames.useQuery();
 
   const approveMutation = trpc.approval.approve.useMutation({
     onSuccess: (data) => { setDoneMessage(data.message); setMode("done"); },
@@ -229,8 +230,10 @@ export default function ApprovalPage() {
   const profileLabel =
     job.profile === "aa_company"
       ? "Absolute Aromas Company Page"
-      : "David Tomlinson Personal Page";
-  const approverName = approverRole === "david" ? "David" : "Danny";
+      : `${approverNames?.david ?? "David"} Personal Page`;
+  const approverName = approverRole === "david"
+    ? (approverNames?.david ?? "David")
+    : (approverNames?.danny ?? "Danny");
 
   // Enrich posts with character count
   const enrichedPosts: Post[] = posts.map((p) => ({
@@ -472,7 +475,13 @@ function ErrorScreen({ message }: { message: string }) {
       <div className="text-center max-w-sm px-4">
         <AlertTriangle className="text-destructive mx-auto mb-3" size={32} />
         <h1 className="text-lg font-semibold text-foreground mb-2">Unable to load approval</h1>
-        <p className="text-sm text-muted-foreground">{message}</p>
+        <p className="text-sm text-muted-foreground mb-6">{message}</p>
+        <a
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          Go to Dashboard
+        </a>
       </div>
     </div>
   );

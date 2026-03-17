@@ -1,0 +1,24 @@
+{
+  "query": "SELECT * FROM approver_config;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute SELECT * FROM approver_config;",
+  "rows": [
+    {
+      "id": "1",
+      "approverRole": "danny",
+      "name": "Harriet",
+      "email": "Harriet@absolute-aromas.com",
+      "updatedAt": "2026-03-17 21:17:06"
+    },
+    {
+      "id": "2",
+      "approverRole": "david",
+      "name": "David",
+      "email": "David@absolute-aromas.com",
+      "updatedAt": "2026-03-17 14:38:14"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tapproverRole\tname\temail\tupdatedAt\n1\tdanny\tHarriet\tHarriet@absolute-aromas.com\t2026-03-17 21:17:06\n2\tdavid\tDavid\tDavid@absolute-aromas.com\t2026-03-17 14:38:14\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

@@ -162,9 +162,9 @@ function ApproversTab() {
     }
   }, [configs]);
 
-  const roles: { key: "danny" | "david"; label: string; desc: string }[] = [
-    { key: "danny", label: "Danny", desc: "Approver for AA Company Page posts" },
-    { key: "david", label: "David", desc: "Approver for David Personal Page posts" },
+  const roles: { key: "danny" | "david"; label: string; desc: string; roleLabel: string }[] = [
+    { key: "danny", label: "AA Company Page Approver", roleLabel: "AA Company Page Approver", desc: "Receives approval emails for all AA Company Page LinkedIn posts" },
+    { key: "david", label: "David Personal Page Approver", roleLabel: "David Personal Page Approver", desc: "Receives approval emails for David's personal LinkedIn posts. Only this person can approve personal page content." },
   ];
 
   return (
@@ -197,7 +197,7 @@ function ApproversTab() {
             <Button size="sm"
               onClick={() => update.mutate({ role: r.key, name: drafts[r.key]?.name ?? "", email: drafts[r.key]?.email ?? "" })}
               disabled={update.isPending} className="bg-cyan-500 hover:bg-cyan-400 text-black">
-              <Save className="w-3.5 h-3.5 mr-1.5" />Save {r.label}
+              <Save className="w-3.5 h-3.5 mr-1.5" />Save
             </Button>
           </CardContent>
         </Card>

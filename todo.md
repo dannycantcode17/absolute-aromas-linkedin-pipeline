@@ -132,3 +132,9 @@
 
 ## V5 Routing Bug Fix
 - [x] Bug: Approval Queue sidebar link goes to /approval (token-based page) instead of a queue list — created ApprovalQueuePage at /approval-queue showing all pending-approval jobs, fixed sidebar nav and badge counter
+
+## Bug Fixes (Session 3)
+- [x] Bug: approver_config data mismatch — danny role had Harriet's name/email. Fixed data in DB (danny → Danny / danny@absolute-aromas.com)
+- [x] Bug: Hardcoded approver names throughout UI — added public settings.getApproverNames tRPC endpoint; updated SubmitJob, JobDetailPage, ApprovalPage, ApprovalQueuePage to pull names dynamically from DB
+- [x] Bug: Admin Approvers section headers showed person names — changed to role labels: "AA Company Page Approver" and "David Personal Page Approver"
+- [x] Bug: /approval error screen was a dead end — added "Go to Dashboard" button to ErrorScreen

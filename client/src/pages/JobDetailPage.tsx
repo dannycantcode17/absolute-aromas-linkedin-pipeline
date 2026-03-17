@@ -26,6 +26,7 @@ export default function JobDetailPage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const jobQuery = trpc.jobs.get.useQuery({ jobId }, { enabled: !isNaN(jobId) });
+  const { data: approverNames } = trpc.settings.getApproverNames.useQuery();
   const retryMutation = trpc.jobs.retryGeneration.useMutation({
     onSuccess: (result) => {
       toast.success(result.message);
@@ -107,7 +108,11 @@ export default function JobDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Required Approver</p>
-                <p className="font-medium">{job.requiredApprover === "david" ? "David Tomlinson" : "Danny Tomlinson"}</p>
+                <p className="font-medium">
+                  {job.requiredApprover === "david"
+                    ? (approverNames?.david ?? "David")
+                    : (approverNames?.danny ?? "Danny")}
+                </p>
               </div>
               {job.targetAudience && (
                 <div>

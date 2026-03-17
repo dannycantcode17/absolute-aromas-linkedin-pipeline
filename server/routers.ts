@@ -872,6 +872,17 @@ Return a JSON array of 10 ideas.`;
 
   // ─── Settings (v5) ───────────────────────────────────────────────────────────────────────────
   settings: router({
+    /** Public: get approver display names keyed by role — used throughout UI so names are never hardcoded */
+    getApproverNames: publicProcedure.query(async () => {
+      const configs = await getAllApproverConfigs();
+      const map: Record<string, string> = {};
+      for (const c of configs) map[c.approverRole] = c.name;
+      return {
+        danny: map["danny"] ?? "Danny",
+        david: map["david"] ?? "David",
+      };
+    }),
+
     // Style Guides
     listStyleGuides: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
