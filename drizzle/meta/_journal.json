@@ -22,6 +22,13 @@
       "when": 1773757996365,
       "tag": "0002_demonic_butterfly",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1773761111389,
+      "tag": "0003_sleepy_ricochet",
+      "breakpoints": true
     }
   ]
 }

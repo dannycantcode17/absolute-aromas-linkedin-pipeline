@@ -5,6 +5,8 @@ import {
   approverConfig,
   auditLog,
   guardrailReviews,
+  ideaBatches,
+  ideas,
   InsertUser,
   jobs,
   posts,
@@ -12,6 +14,8 @@ import {
   type GuardrailFlag,
   type InsertJob,
   type InsertPost,
+  type InsertIdeaBatch,
+  type InsertIdea,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -354,6 +358,51 @@ export async function getQueueAnalytics() {
   const publishedCount = allPosts.filter((p) => p.publicationStatus === "confirmed").length;
 
   return { totalGenerated, approvalRate, avgHoursToApproval, flagRate, queueCount, publishedCount };
+}
+
+// ─── Idea Batches ─────────────────────────────────────────────────────────────
+
+export async function createIdeaBatch(data: InsertIdeaBatch) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(ideaBatches).values(data);
+  return result[0];
+}
+
+export async function createIdeas(items: InsertIdea[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (!items.length) return;
+  await db.insert(ideas).values(items);
+}
+
+export async function getIdeaBatchById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(ideaBatches).where(eq(ideaBatches.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function getIdeasByBatchId(batchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ideas).where(eq(ideas.batchId, batchId)).orderBy(ideas.id);
+}
+
+export async function listIdeaBatches(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ideaBatches).where(eq(ideaBatches.submittedById, userId)).orderBy(desc(ideaBatches.createdAt)).limit(50);
+}
+
+export async function updateIdeaStatus(
+  ideaId: number,
+  status: "pending" | "queued" | "rejected",
+  jobId?: number
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(ideas).set({ status, ...(jobId ? { jobId } : {}) }).where(eq(ideas.id, ideaId));
 }
 
 export async function getUnsyncedAuditEntries() {

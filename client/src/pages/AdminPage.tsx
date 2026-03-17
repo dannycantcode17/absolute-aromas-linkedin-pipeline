@@ -83,7 +83,7 @@ function GuardrailsTab() {
       ) : reviews.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center">
-            <CheckCircle size={28} className="text-green-600 mx-auto mb-2" />
+            <CheckCircle size={28} className="text-primary mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No pending guardrail flags.</p>
           </CardContent>
         </Card>
@@ -99,7 +99,7 @@ function GuardrailsTab() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge
-                        className={`text-xs ${item.review.severity === "block" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"}`}
+                        className={`text-xs ${item.review.severity === "block" ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}
                       >
                         {item.review.severity === "block" ? "BLOCKING" : "WARNING"}
                       </Badge>
@@ -111,7 +111,7 @@ function GuardrailsTab() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-shrink-0 border-green-300 text-green-700 hover:bg-green-50"
+                    className="flex-shrink-0 border-primary/30 text-primary hover:bg-primary/8"
                     onClick={() => resolveMutation.mutate({ reviewId: item.review.id })}
                     disabled={resolveMutation.isPending}
                   >

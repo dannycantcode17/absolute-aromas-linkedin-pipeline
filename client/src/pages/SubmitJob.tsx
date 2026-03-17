@@ -100,22 +100,22 @@ export default function SubmitJob() {
     return (
       <AppLayout title="Confirm Named Client Usage">
         <div className="max-w-lg mx-auto">
-          <Card className="border-amber-200 bg-amber-50">
+          <Card className="border-amber-500/30 bg-amber-500/8">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="text-amber-600" size={20} />
-                <CardTitle className="text-amber-900 text-lg">Named Client Confirmation Required</CardTitle>
+                <AlertTriangle className="text-amber-400" size={18} />
+                <CardTitle className="text-foreground text-base">Named Client Confirmation Required</CardTitle>
               </div>
-              <CardDescription className="text-amber-800">
+              <CardDescription className="text-muted-foreground">
                 You indicated this post may reference a named client. Please confirm this is intentional
                 before generation proceeds.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-amber-900">
+              <p className="text-sm text-foreground">
                 By confirming, you acknowledge that:
               </p>
-              <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>You have permission to reference this client publicly</li>
                 <li>The client has approved being named in LinkedIn content</li>
                 <li>The post will still require approver sign-off before publishing</li>
@@ -124,7 +124,7 @@ export default function SubmitJob() {
                 <Button
                   onClick={() => confirmMutation.mutate({ jobId: submittedJobId })}
                   disabled={confirmMutation.isPending}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  className="bg-amber-500 hover:bg-amber-400 text-background"
                 >
                   {confirmMutation.isPending && <Loader2 size={14} className="mr-2 animate-spin" />}
                   Confirm & Generate
@@ -190,9 +190,9 @@ export default function SubmitJob() {
                 </button>
               </div>
               {profile === "david_personal" && (
-                <Alert className="border-blue-200 bg-blue-50">
-                  <Info size={14} className="text-blue-600" />
-                  <AlertDescription className="text-blue-800 text-xs">
+                <Alert className="border-primary/30 bg-primary/8">
+                  <Info size={14} className="text-primary" />
+                  <AlertDescription className="text-muted-foreground text-xs">
                     Posts for David's personal page can only be approved by David. Danny cannot approve these.
                   </AlertDescription>
                 </Alert>

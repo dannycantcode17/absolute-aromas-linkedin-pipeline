@@ -17,6 +17,7 @@ import {
   Shield,
   Timer,
   CheckSquare,
+  Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -44,14 +45,14 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_confirmation: "bg-amber-100 text-amber-800 border-amber-200",
-  pending_style_guide: "bg-blue-100 text-blue-800 border-blue-200",
-  generating: "bg-purple-100 text-purple-800 border-purple-200",
-  pending_guardrail: "bg-red-100 text-red-800 border-red-200",
-  pending_approval: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  approved: "bg-green-100 text-green-800 border-green-200",
-  rejected: "bg-gray-100 text-gray-600 border-gray-200",
-  published: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  pending_confirmation: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  pending_style_guide:  "bg-cyan-500/10 text-cyan-400 border-cyan-500/25",
+  generating:           "bg-cyan-500/10 text-cyan-400 border-cyan-500/25",
+  pending_guardrail:    "bg-red-500/15 text-red-400 border-red-500/30",
+  pending_approval:     "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  approved:             "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+  rejected:             "bg-white/5 text-muted-foreground border-border",
+  published:            "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
 };
 
 export default function Dashboard() {
@@ -78,73 +79,40 @@ export default function Dashboard() {
     <AppLayout title="Dashboard">
       {/* ── Analytics strip (admin only) ── */}
       {isAdmin && analytics && (
-        <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-          <p className="text-xs font-semibold text-primary mb-3 uppercase tracking-wide">Pipeline Health</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              {
-                icon: <PenLine size={14} className="text-primary" />,
-                label: "Total Generated",
-                value: analytics.totalGenerated,
-                suffix: "",
-              },
-              {
-                icon: <TrendingUp size={14} className="text-green-600" />,
-                label: "Approval Rate",
-                value: analytics.approvalRate,
-                suffix: "%",
-              },
-              {
-                icon: <Timer size={14} className="text-blue-600" />,
-                label: "Avg. Time to Approve",
-                value: analytics.avgHoursToApproval,
-                suffix: "h",
-              },
-              {
-                icon: <Shield size={14} className="text-orange-500" />,
-                label: "Guardrail Flag Rate",
-                value: analytics.flagRate,
-                suffix: "%",
-              },
-              {
-                icon: <Clock size={14} className="text-yellow-600" />,
-                label: "In Queue",
-                value: analytics.queueCount,
-                suffix: "",
-              },
-              {
-                icon: <CheckSquare size={14} className="text-emerald-600" />,
-                label: "Confirmed Live",
-                value: analytics.publishedCount,
-                suffix: "",
-              },
-            ].map((stat) => (
-              <div key={stat.label} className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  {stat.icon}
-                  <span className="text-xs">{stat.label}</span>
-                </div>
-                <span className="text-xl font-bold text-foreground">
-                  {stat.value}
-                  <span className="text-sm font-normal text-muted-foreground">{stat.suffix}</span>
-                </span>
+        <div className="mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: "Total Generated", value: analytics.totalGenerated, suffix: "",  icon: <PenLine size={13} /> },
+            { label: "Approval Rate",   value: analytics.approvalRate,   suffix: "%", icon: <TrendingUp size={13} /> },
+            { label: "Avg Approval",    value: analytics.avgHoursToApproval, suffix: "h", icon: <Timer size={13} /> },
+            { label: "Flag Rate",       value: analytics.flagRate,       suffix: "%", icon: <Shield size={13} /> },
+            { label: "In Queue",        value: analytics.queueCount,     suffix: "",  icon: <Clock size={13} /> },
+            { label: "Confirmed Live",  value: analytics.publishedCount, suffix: "",  icon: <CheckSquare size={13} /> },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card border border-border rounded-lg px-4 py-3">
+              <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                <span className="text-primary">{stat.icon}</span>
+                <span className="text-[11px] font-medium">{stat.label}</span>
               </div>
-            ))}
-          </div>
+              <span className="text-2xl font-bold text-primary">
+                {stat.value}
+                <span className="text-sm font-normal text-muted-foreground ml-0.5">{stat.suffix}</span>
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {/* ── Basic stats ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { label: "Total Jobs", value: localStats.total, color: "text-foreground" },
-          { label: "Awaiting Action", value: localStats.pending, color: "text-yellow-600" },
-          { label: "Approved", value: localStats.approved, color: "text-green-600" },
-          { label: "Published", value: localStats.published, color: "text-emerald-600" },
+          { label: "Total Jobs",     value: localStats.total,     color: "text-foreground" },
+          { label: "Awaiting Action",value: localStats.pending,   color: "text-amber-400" },
+          { label: "Approved",       value: localStats.approved,  color: "text-primary" },
+          { label: "Published",      value: localStats.published, color: "text-primary" },
         ].map((stat) => (
-          <Card key={stat.label} className="border-border">
+          <Card key={stat.label} className="border-border bg-card">
             <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+              <p className="text-[11px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">{stat.label}</p>
               <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
             </CardContent>
           </Card>
@@ -160,14 +128,21 @@ export default function Dashboard() {
             size="sm"
             onClick={() => jobsQuery.refetch()}
             disabled={jobsQuery.isFetching}
+            className="h-8 text-[12px]"
           >
-            <RefreshCw size={14} className={`mr-1.5 ${jobsQuery.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw size={13} className={`mr-1.5 ${jobsQuery.isFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="h-8 text-[12px] gap-1.5">
+            <Link href="/ideas">
+              <Sparkles size={13} />
+              Generate Ideas
+            </Link>
+          </Button>
+          <Button asChild size="sm" className="h-8 text-[12px] gap-1.5">
             <Link href="/submit">
-              <PenLine size={14} className="mr-1.5" />
-              New Idea
+              <PenLine size={13} />
+              Submit Post
             </Link>
           </Button>
         </div>

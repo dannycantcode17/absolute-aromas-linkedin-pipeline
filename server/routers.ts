@@ -7,25 +7,31 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   addAuditEntry,
   consumeApprovalToken,
+  createIdeaBatch,
+  createIdeas,
+  createJob,
   getAllApproverConfigs,
   getAllUsers,
   getApprovalToken,
   getApproverConfig,
   getAuditLog,
+  getIdeasByBatchId,
+  getIdeaBatchById,
   getJobById,
   getPostById,
   getPostsByJobId,
   getReadyToPostQueue,
+  listIdeaBatches,
   listJobs,
   markPostPublished,
   resolveGuardrailReview,
   updateApproverConfig,
+  updateIdeaStatus,
   updateJobStatus,
   updatePostStatus,
   updateUserRole,
   getPendingGuardrailReviews,
   getActivePostsByJobId,
-  createJob,
 } from "./db";
 import { sendApprovalConfirmationEmail, sendEditRequestEmail } from "./email";
 import { runGenerationPipeline } from "./pipeline";
@@ -569,7 +575,224 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Admin ─────────────────────────────────────────────────────────────────
+  // ─── Idea Generator ─────────────────────────────────────────────────────────────
+
+  ideas: router({
+    /**
+     * Generate a batch of ~10 content ideas using Claude.
+     * Returns the batch ID + ideas immediately after generation.
+     */
+    generate: protectedProcedure
+      .input(
+        z.object({
+          promptTopic: z.string().min(5).max(500),
+          contentPillar: z.string().optional(),
+          profile: z.enum(["aa_company", "david_personal", "both"]).default("both"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        const allPillars = [...AA_COMPANY_PILLARS, ...DAVID_PERSONAL_PILLARS];
+        const pillarList = allPillars.map((p) => `- ${p}`).join("\n");
+
+        const profileContext =
+          input.profile === "aa_company"
+            ? "Absolute Aromas Company Page (B2B, targeting private label buyers, cosmetic formulators, and wellness brands)"
+            : input.profile === "david_personal"
+            ? "David Tomlinson Personal Page (thought leadership, founder perspective, industry insider)"
+            : "either the Absolute Aromas Company Page or David Tomlinson's Personal Page";
+
+        const systemPrompt = `You are a LinkedIn content strategist for Absolute Aromas, a UK-based essential oil manufacturer and private label specialist.
+
+Absolute Aromas is known for:
+- GC-MS testing on every batch
+- UK manufacturing with global sourcing
+- Private label services for wellness brands
+- 30+ years of expertise in aromatherapy
+
+Content pillars available:
+${pillarList}
+
+You must return a JSON array of exactly 10 content ideas. Each idea must be distinct, specific, and immediately actionable as a LinkedIn post. Avoid vague or generic ideas.
+
+For each idea return:
+- title: A compelling 5-10 word headline/hook (not a question unless it's genuinely provocative)
+- description: 2-3 sentences explaining the specific angle, what data/story/insight to use, and why it will resonate
+- suggestedPillar: The best matching content pillar from the list above
+- suggestedProfile: "aa_company" or "david_personal"
+- rationale: One sentence on why this fits the Absolute Aromas brand voice`;
+
+        const userPrompt = `Generate 10 LinkedIn content ideas for ${profileContext}.
+
+Topic/theme to explore: ${input.promptTopic}${input.contentPillar ? `\nFocus on this content pillar: ${input.contentPillar}` : ""}
+
+Return a JSON array of 10 ideas.`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "content_ideas",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  ideas: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        suggestedPillar: { type: "string" },
+                        suggestedProfile: { type: "string", enum: ["aa_company", "david_personal"] },
+                        rationale: { type: "string" },
+                      },
+                      required: ["title", "description", "suggestedPillar", "suggestedProfile", "rationale"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["ideas"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const raw = response.choices[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as {
+          ideas: Array<{
+            title: string;
+            description: string;
+            suggestedPillar: string;
+            suggestedProfile: "aa_company" | "david_personal";
+            rationale: string;
+          }>;
+        };
+
+        const generatedIdeas = parsed.ideas ?? [];
+
+        // Persist the batch
+        const batchInsert = await createIdeaBatch({
+          submittedById: ctx.user.id,
+          promptTopic: input.promptTopic,
+          contentPillar: input.contentPillar ?? null,
+          profile: input.profile,
+        });
+
+        const batchId = (batchInsert as { insertId?: number })?.insertId ?? 0;
+
+        // Persist the ideas
+        await createIdeas(
+          generatedIdeas.map((idea) => ({
+            batchId,
+            title: idea.title,
+            description: idea.description,
+            suggestedPillar: idea.suggestedPillar,
+            suggestedProfile: idea.suggestedProfile,
+            rationale: idea.rationale,
+            status: "pending" as const,
+          }))
+        );
+
+        const savedIdeas = await getIdeasByBatchId(batchId);
+        return { batchId, ideas: savedIdeas };
+      }),
+
+    /** List past idea batches for the current user */
+    listBatches: protectedProcedure.query(async ({ ctx }) => {
+      return listIdeaBatches(ctx.user.id);
+    }),
+
+    /** Get a specific batch with its ideas */
+    getBatch: protectedProcedure
+      .input(z.object({ batchId: z.number().int() }))
+      .query(async ({ ctx, input }) => {
+        const batch = await getIdeaBatchById(input.batchId);
+        if (!batch) throw new TRPCError({ code: "NOT_FOUND" });
+        if (batch.submittedById !== ctx.user.id && ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const batchIdeas = await getIdeasByBatchId(input.batchId);
+        return { batch, ideas: batchIdeas };
+      }),
+
+    /** Add an idea to the job queue (creates a Job from the idea) */
+    addToQueue: protectedProcedure
+      .input(
+        z.object({
+          ideaId: z.number().int(),
+          profile: z.enum(["aa_company", "david_personal"]),
+          contentPillar: z.string().min(1),
+          toneHint: z.string().optional(),
+          targetAudience: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const idea = await (async () => {
+          const { getDb } = await import("./db");
+          const db = await getDb();
+          if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+          const { ideas: ideasTable } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          const result = await db.select().from(ideasTable).where(eq(ideasTable.id, input.ideaId)).limit(1);
+          return result[0] ?? null;
+        })();
+
+        if (!idea) throw new TRPCError({ code: "NOT_FOUND" });
+        if (idea.status === "queued") throw new TRPCError({ code: "BAD_REQUEST", message: "Already queued" });
+
+        const requiredApprover: "danny" | "david" =
+          input.profile === "david_personal" ? "david" : "danny";
+
+        const jobResult = await createJob({
+          submittedById: ctx.user.id,
+          profile: input.profile,
+          contentPillar: input.contentPillar,
+          topic: idea.title + ": " + idea.description,
+          toneHint: input.toneHint ?? null,
+          targetAudience: input.targetAudience ?? null,
+          requiredApprover,
+          namedClientFlag: false,
+          namedClientConfirmed: false,
+        });
+
+        const jobId = (jobResult as { insertId?: number })?.insertId ?? 0;
+
+        await updateIdeaStatus(input.ideaId, "queued", jobId);
+
+        await addAuditEntry({
+          jobId,
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "idea_queued",
+          details: { ideaId: input.ideaId, title: idea.title },
+        });
+
+        // Kick off generation pipeline
+        const notionApiKey = process.env.NOTION_API_KEY ?? "";
+        const appBaseUrl = process.env.APP_BASE_URL ?? "https://localhost:3000";
+        runGenerationPipeline({ jobId, notionApiKey, appBaseUrl }).catch((err) =>
+          console.error("[Pipeline] Idea queue generation error:", err)
+        );
+
+        return { success: true, jobId };
+      }),
+
+    /** Reject an idea */
+    reject: protectedProcedure
+      .input(z.object({ ideaId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        await updateIdeaStatus(input.ideaId, "rejected");
+        return { success: true };
+      }),
+  }),
+
+  // ─── Admin ─────────────────────────────────────────────────────────────
 
   admin: router({
     /** List all users */

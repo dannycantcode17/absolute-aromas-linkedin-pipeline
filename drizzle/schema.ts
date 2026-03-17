@@ -236,3 +236,49 @@ export const approverConfig = mysqlTable("approver_config", {
 });
 
 export type ApproverConfig = typeof approverConfig.$inferSelect;
+
+// ─── Idea Batches ─────────────────────────────────────────────────────────────
+// A batch is generated when a user requests "give me 10 ideas".
+// Each idea in the batch can be queued (turned into a Job) or rejected.
+
+export const ideaBatches = mysqlTable("idea_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  submittedById: int("submittedById").notNull(), // FK → users.id
+  /** The prompt the user provided to seed the ideas */
+  promptTopic: text("promptTopic").notNull(),
+  /** Optional content pillar filter */
+  contentPillar: varchar("contentPillar", { length: 128 }),
+  /** Optional profile filter */
+  profile: mysqlEnum("profile", ["aa_company", "david_personal", "both"]).default("both"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type IdeaBatch = typeof ideaBatches.$inferSelect;
+export type InsertIdeaBatch = typeof ideaBatches.$inferInsert;
+
+export const ideas = mysqlTable("ideas", {
+  id: int("id").autoincrement().primaryKey(),
+  batchId: int("batchId").notNull(), // FK → idea_batches.id
+  /** Short headline / hook for the idea */
+  title: varchar("title", { length: 256 }).notNull(),
+  /** 2-3 sentence description of the idea and angle */
+  description: text("description").notNull(),
+  /** Suggested content pillar */
+  suggestedPillar: varchar("suggestedPillar", { length: 128 }),
+  /** Suggested profile */
+  suggestedProfile: mysqlEnum("suggestedProfile", ["aa_company", "david_personal"]),
+  /** Why this idea fits the brand */
+  rationale: text("rationale"),
+  /**
+   * pending  → not yet actioned
+   * queued   → turned into a Job
+   * rejected → dismissed by user
+   */
+  status: mysqlEnum("status", ["pending", "queued", "rejected"]).default("pending").notNull(),
+  /** FK → jobs.id if queued */
+  jobId: int("jobId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Idea = typeof ideas.$inferSelect;
+export type InsertIdea = typeof ideas.$inferInsert;

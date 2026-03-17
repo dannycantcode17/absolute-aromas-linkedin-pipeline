@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `idea_batches` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`submittedById` int NOT NULL,\n\t`promptTopic` text NOT NULL,\n\t`contentPillar` varchar(128),\n\t`profile` enum('aa_company','david_personal','both') DEFAULT 'both',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `idea_batches_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE `ideas` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`batchId` int NOT NULL,\n\t`title` varchar(256) NOT NULL,\n\t`description` text NOT NULL,\n\t`suggestedPillar` varchar(128),\n\t`suggestedProfile` enum('aa_company','david_personal'),\n\t`rationale` text,\n\t`status` enum('pending','queued','rejected') NOT NULL DEFAULT 'pending',\n\t`jobId` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `ideas_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute CREATE TABLE `idea_batches` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`submittedById` int NOT NULL,\n\t`promptTopic` text NOT NULL,\n\t`contentPillar` varchar(128),\n\t`profile` enum('aa_company','david_personal','both') DEFAULT 'both',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `idea_batches_id` PRIMARY KEY(`id`)\n);\n\nCREATE TABLE `ideas` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`batchId` int NOT NULL,\n\t`title` varchar(256) NOT NULL,\n\t`description` text NOT NULL,\n\t`suggestedPillar` varchar(128),\n\t`suggestedProfile` enum('aa_company','david_personal'),\n\t`rationale` text,\n\t`status` enum('pending','queued','rejected') NOT NULL DEFAULT 'pending',\n\t`jobId` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `ideas_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 924
+}

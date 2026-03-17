@@ -285,7 +285,7 @@ export default function ApprovalPage() {
         {approverRole === "david" && (
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Info size={14} className="text-blue-600" />
-            <AlertDescription className="text-blue-800 text-sm">
+            <AlertDescription className="text-muted-foreground text-sm">
               These posts are for your personal LinkedIn page. Only you can approve them.
             </AlertDescription>
           </Alert>
@@ -346,7 +346,7 @@ export default function ApprovalPage() {
         {mode === "review" && (
           <div className="space-y-3 max-w-2xl">
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
               disabled={!selectedPostId || approveMutation.isPending}
               onClick={() => {
@@ -390,11 +390,11 @@ export default function ApprovalPage() {
         {mode === "edit" && (
           <Card className="border-amber-200 bg-amber-50 max-w-2xl">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-amber-900">Request Edits</CardTitle>
+              <CardTitle className="text-base text-foreground">Request Edits</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="feedback" className="text-amber-900">Feedback for the AI</Label>
+                <Label htmlFor="feedback" className="text-foreground">Feedback for the AI</Label>
                 <Textarea
                   id="feedback"
                   value={editFeedback}
@@ -422,11 +422,11 @@ export default function ApprovalPage() {
         {mode === "reject" && (
           <Card className="border-red-200 bg-red-50 max-w-2xl">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-red-900">Reject Post</CardTitle>
+              <CardTitle className="text-base text-foreground">Reject Post</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="reason" className="text-red-900">Reason for rejection</Label>
+                <Label htmlFor="reason" className="text-foreground">Reason for rejection</Label>
                 <Textarea
                   id="reason"
                   value={rejectReason}
@@ -482,8 +482,8 @@ function SuccessScreen({ message }: { message: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center max-w-sm px-4">
-        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="text-green-600" size={28} />
+        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="text-primary" size={28} />
         </div>
         <h1 className="text-lg font-semibold text-foreground mb-2">Done</h1>
         <p className="text-sm text-muted-foreground">{message}</p>

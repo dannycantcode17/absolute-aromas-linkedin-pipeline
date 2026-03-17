@@ -1,134 +1,156 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Leaf, PenLine, CheckSquare, Shield, ArrowRight } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
+import { Leaf, Sparkles, ShieldCheck, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+
+const features = [
+  {
+    icon: <Sparkles size={17} className="text-primary" />,
+    title: "AI-Powered Generation",
+    description:
+      "Claude generates 3–5 brand-aligned post variants per submission, informed by the live Absolute Aromas style guide.",
+  },
+  {
+    icon: <ShieldCheck size={17} className="text-primary" />,
+    title: "8-Rule Guardrail Engine",
+    description:
+      "Every draft is checked for medical claims, competitor mentions, revenue figures, and tone compliance before reaching an approver.",
+  },
+  {
+    icon: <CheckCircle size={17} className="text-primary" />,
+    title: "Dual-Profile Approval",
+    description:
+      "Company page posts route to Danny. David's personal page posts route to David only. No cross-approval, no auto-publish.",
+  },
+];
+
+const steps = [
+  { step: "01", label: "Submit idea" },
+  { step: "02", label: "Style guide fetch" },
+  { step: "03", label: "AI generation" },
+  { step: "04", label: "Guardrail check" },
+  { step: "05", label: "Approval & queue" },
+];
 
 export default function Home() {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="text-primary animate-spin" size={26} />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    navigate("/dashboard");
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container flex items-center justify-between py-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <Leaf size={16} className="text-primary-foreground" />
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Subtle dot grid */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(oklch(0.72 0.18 200 / 0.12) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      {/* Nav */}
+      <header className="relative border-b border-border/60 px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/25 flex items-center justify-center">
+              <Leaf size={14} className="text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-sm text-foreground leading-tight">Absolute Aromas</p>
-              <p className="text-xs text-muted-foreground leading-tight">LinkedIn Pipeline</p>
+              <p className="text-foreground font-semibold text-[13px] leading-tight">Absolute Aromas</p>
+              <p className="text-muted-foreground text-[11px]">LinkedIn Pipeline</p>
             </div>
           </div>
-          <div>
-            {loading ? null : isAuthenticated ? (
-              <Button asChild size="sm">
-                <Link href="/dashboard">Go to Dashboard</Link>
-              </Button>
-            ) : (
-              <Button asChild size="sm">
-                <a href={getLoginUrl()}>Sign In</a>
-              </Button>
-            )}
-          </div>
+          <Button size="sm" asChild className="h-8 text-[13px] font-medium">
+            <a href={getLoginUrl()}>Sign In</a>
+          </Button>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="container py-16 md:py-24">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-xs font-medium mb-6">
-            <Shield size={12} />
-            Brand-compliant. Human-approved. Never auto-published.
+      <main className="relative flex-1 flex flex-col items-center justify-center px-6 py-20">
+        <div className="max-w-2xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/8 text-primary text-xs font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Brand-compliant content, every time
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4">
-            LinkedIn content,{" "}
-            <span className="text-primary">crafted to your voice</span>
-          </h1>
-          <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-            Submit a content idea. The system fetches your live style guide, generates 3–5 brand-compliant
-            variants using Claude AI, and routes them to the right approver. You review, approve, and
-            publish manually — always in control.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {isAuthenticated ? (
-              <>
-                <Button asChild size="lg">
-                  <Link href="/submit">
-                    <PenLine size={16} className="mr-2" />
-                    Submit an Idea
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/dashboard">
-                    View Dashboard
-                    <ArrowRight size={16} className="ml-2" />
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <Button asChild size="lg">
-                <a href={getLoginUrl()}>
-                  Get Started
-                  <ArrowRight size={16} className="ml-2" />
-                </a>
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
 
-      {/* Features */}
-      <section className="container pb-16">
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="border-border">
-            <CardContent className="pt-6">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <PenLine size={20} className="text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Two distinct voices</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Separate system prompts for the Absolute Aromas company page and David's personal page.
-                Each post sounds exactly right for its profile.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="pt-6">
-              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center mb-4">
-                <Shield size={20} className="text-accent-foreground" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Guardrails enforced</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Every draft is automatically checked for medical claims, competitor names, revenue figures,
-                and more — before it reaches the approver.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="pt-6">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-4">
-                <CheckSquare size={20} className="text-green-700" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Human approval, always</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                No post ever publishes automatically. Approved posts sit in the Ready to Post queue
-                until you copy and publish them manually on LinkedIn.
-              </p>
-            </CardContent>
-          </Card>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight tracking-tight">
+            LinkedIn content that{" "}
+            <span className="text-primary">never goes off-brand</span>
+          </h1>
+
+          <p className="text-muted-foreground text-base leading-relaxed max-w-xl mx-auto">
+            Submit an idea. Claude generates post variants using the live Absolute Aromas style guide.
+            Guardrails check every word. Approvers review and approve. You copy and post.
+          </p>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Button size="lg" asChild className="h-11 px-6 font-medium gap-2">
+              <a href={getLoginUrl()}>
+                Get Started
+                <ArrowRight size={15} />
+              </a>
+            </Button>
+          </div>
         </div>
-      </section>
+
+        {/* Feature cards */}
+        <div className="max-w-4xl mx-auto mt-20 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="bg-card border border-border rounded-lg p-5 space-y-3"
+            >
+              <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
+                {f.icon}
+              </div>
+              <h3 className="text-foreground font-semibold text-[14px]">{f.title}</h3>
+              <p className="text-muted-foreground text-[13px] leading-relaxed">{f.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Pipeline steps */}
+        <div className="max-w-4xl mx-auto mt-16 w-full">
+          <p className="text-center text-[11px] text-muted-foreground uppercase tracking-widest mb-8 font-medium">
+            How it works
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {steps.map((s, i) => (
+              <div key={s.step} className="flex flex-col items-center gap-2 text-center relative">
+                <div className="w-9 h-9 rounded-full border border-primary/30 bg-primary/8 flex items-center justify-center">
+                  <span className="text-primary text-[11px] font-bold">{s.step}</span>
+                </div>
+                <p className="text-[12px] text-muted-foreground font-medium">{s.label}</p>
+                {i < 4 && (
+                  <div className="hidden md:block absolute top-[18px] left-[calc(50%+20px)] right-[calc(-50%+20px)] h-px bg-border" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card">
-        <div className="container py-4">
-          <p className="text-xs text-muted-foreground">
-            Absolute Aromas LinkedIn Content Pipeline — internal tool. No LinkedIn API integration.
-            All publishing is manual.
+      <footer className="relative border-t border-border/60 px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <p className="text-muted-foreground text-[11px]">
+            © {new Date().getFullYear()} Absolute Aromas — internal tool only.
           </p>
+          <p className="text-muted-foreground text-[11px]">No auto-publish. No exceptions.</p>
         </div>
       </footer>
     </div>

@@ -40,7 +40,7 @@
 ## Phase 7: Secrets, Tests, Polish
 - [x] Wire NOTION_API_KEY and NOTION_AUDIT_DB_ID secrets
 - [x] Vitest tests: guardrails (8 tests), auth/logout, role guards, pillar lookup — 17/17 passing
-- [ ] Final UI polish and mobile responsiveness check
+- [x] Final UI polish and mobile responsiveness check
 
 ## Phase 8: Documentation
 - [x] Setup guide (API keys, Notion setup, first-run)
@@ -57,3 +57,15 @@
 - [x] Overdue badge on Queue cards (approved but not published after 7 days)
 - [x] Seed approver config: Danny danny@absolute-aromas.com, David David@absolute-aromas.com
 - [x] Add Harriet (Harriet@absolute-aromas.com) and Amy Klaire (AmyK@absolute-aromas.com) to admin panel team list
+
+## V3 Features
+- [x] Batch idea generator: tRPC procedure calls Claude to produce 10 content ideas from a topic/pillar prompt
+- [x] IdeaGenerator page: user inputs topic + pillar, gets 10 ideas, can add to queue or reject each
+- [x] Ideas stored in DB (idea_batches + ideas tables) with status: pending / queued / rejected
+- [x] Add-to-queue action creates a Job from the idea and navigates to job detail
+- [x] Dark mode restyle: charcoal background (#0f1117), layered cards (#1a1d27), cyan accent (#06b6d4)
+- [x] Update index.css: full dark palette, cyan CSS variables, remove all green/gold
+- [x] Restyle AppLayout sidebar: dark panel, cyan active state, muted inactive
+- [x] Restyle all pages: Home, SubmitJob, Dashboard, JobDetailPage, ApprovalPage, QueuePage, HistoryPage, AdminPage
+- [x] Restyle status badges: cyan/amber/red/grey pills
+- [x] Restyle buttons: solid cyan primary, transparent cyan outline secondary, muted red destructive

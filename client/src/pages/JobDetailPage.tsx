@@ -11,12 +11,12 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  flagged: "bg-red-100 text-red-800",
-  pending_approval: "bg-yellow-100 text-yellow-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-gray-100 text-gray-500",
-  superseded: "bg-gray-50 text-gray-400",
+  draft:            "bg-white/5 text-muted-foreground border-border",
+  flagged:          "bg-red-500/15 text-red-400 border-red-500/30",
+  pending_approval: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  approved:         "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+  rejected:         "bg-white/5 text-muted-foreground border-border",
+  superseded:       "bg-white/5 text-muted-foreground/50 border-border",
 };
 
 export default function JobDetailPage() {

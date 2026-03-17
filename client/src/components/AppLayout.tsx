@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   PenLine,
   CheckSquare,
-  Clock,
   History,
   Settings,
   LogOut,
@@ -15,6 +14,8 @@ import {
   Menu,
   X,
   AlertTriangle,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -24,15 +25,17 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   adminOnly?: boolean;
+  matchPrefix?: string;
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} /> },
-  { label: "Submit Idea", href: "/submit", icon: <PenLine size={18} /> },
-  { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={18} />, adminOnly: true },
-  { label: "Guardrail Review", href: "/admin?tab=guardrails", icon: <AlertTriangle size={18} />, adminOnly: true },
-  { label: "Post History", href: "/history", icon: <History size={18} />, adminOnly: true },
-  { label: "Admin", href: "/admin", icon: <Settings size={18} />, adminOnly: true },
+  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={15} />, matchPrefix: "/dashboard" },
+  { label: "Idea Generator", href: "/ideas", icon: <Sparkles size={15} /> },
+  { label: "Submit Post", href: "/submit", icon: <PenLine size={15} /> },
+  { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={15} />, adminOnly: true },
+  { label: "Guardrail Review", href: "/admin?tab=guardrails", icon: <AlertTriangle size={15} />, adminOnly: true },
+  { label: "Post History", href: "/history", icon: <History size={15} />, adminOnly: true },
+  { label: "Admin", href: "/admin", icon: <Settings size={15} />, adminOnly: true },
 ];
 
 interface AppLayoutProps {
@@ -55,8 +58,8 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Leaf className="text-primary animate-pulse" size={32} />
-          <p className="text-muted-foreground text-sm">Loading...</p>
+          <Loader2 className="text-primary animate-spin" size={28} />
+          <p className="text-muted-foreground text-xs tracking-wide">Loading pipeline...</p>
         </div>
       </div>
     );
@@ -65,18 +68,39 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center max-w-sm mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Leaf className="text-primary" size={28} />
-            <span className="text-xl font-semibold text-foreground">Absolute Aromas</span>
+        {/* Subtle grid background */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(oklch(0.72 0.18 200) 1px, transparent 1px), linear-gradient(90deg, oklch(0.72 0.18 200) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        <div className="relative text-center max-w-sm mx-auto px-6">
+          {/* Logo mark */}
+          <div className="flex items-center justify-center gap-2.5 mb-8">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <Leaf size={20} className="text-primary" />
+            </div>
+            <div className="text-left">
+              <p className="text-foreground font-semibold text-sm leading-tight">Absolute Aromas</p>
+              <p className="text-muted-foreground text-xs">LinkedIn Pipeline</p>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">LinkedIn Content Pipeline</h1>
-          <p className="text-muted-foreground mb-6 text-sm">
-            Sign in to submit content ideas, manage approvals, and access the ready-to-post queue.
+
+          <h1 className="text-2xl font-bold text-foreground mb-2">Content Pipeline</h1>
+          <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+            Brand-compliant LinkedIn content — from idea to approved post, with a full audit trail.
           </p>
-          <Button asChild className="w-full">
-            <a href={getLoginUrl()}>Sign In</a>
+
+          <Button asChild className="w-full h-10 font-medium">
+            <a href={getLoginUrl()}>Sign In to Continue</a>
           </Button>
+
+          <p className="text-xs text-muted-foreground mt-4">
+            Access is restricted to the Absolute Aromas team.
+          </p>
         </div>
       </div>
     );
@@ -85,43 +109,54 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
   const isAdmin = user?.role === "admin";
   const visibleNav = navItems.filter((item) => !item.adminOnly || isAdmin);
 
+  function isActive(item: NavItem): boolean {
+    if (item.matchPrefix) return location.startsWith(item.matchPrefix);
+    // Exact match for most items; also match /admin without tab param
+    if (item.href === "/admin") return location === "/admin" || location.startsWith("/admin?tab=");
+    if (item.href.includes("?")) {
+      const base = item.href.split("?")[0];
+      const param = item.href.split("?")[1];
+      return location === base + "?" + param || location.startsWith(base + "?" + param);
+    }
+    return location === item.href;
+  }
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center flex-shrink-0">
-            <Leaf size={16} className="text-sidebar-primary-foreground" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/25 flex items-center justify-center flex-shrink-0">
+            <Leaf size={14} className="text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-sidebar-foreground font-semibold text-sm leading-tight truncate">
+            <p className="text-sidebar-foreground font-semibold text-[13px] leading-tight truncate">
               Absolute Aromas
             </p>
-            <p className="text-sidebar-foreground/60 text-xs truncate">LinkedIn Pipeline</p>
+            <p className="text-muted-foreground text-[11px] truncate">LinkedIn Pipeline</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
         {visibleNav.map((item) => {
-          const isActive = location === item.href || location.startsWith(item.href + "?") ||
-            (item.href === "/dashboard" && location.startsWith("/dashboard"));
+          const active = isActive(item);
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative ${
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all relative border-l-2 ${
+                active
+                  ? "border-l-primary bg-primary/10 text-primary"
+                  : "border-l-transparent text-muted-foreground hover:text-foreground hover:bg-white/5"
               }`}
             >
-              {item.icon}
+              <span className={active ? "text-primary" : "text-muted-foreground"}>{item.icon}</span>
               <span>{item.label}</span>
               {item.href.includes("guardrail") && pendingGuardrailCount > 0 && (
-                <Badge className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0 h-5">
+                <Badge className="ml-auto bg-red-500/80 text-white text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center">
                   {pendingGuardrailCount}
                 </Badge>
               )}
@@ -130,26 +165,26 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
         })}
       </nav>
 
-      {/* User */}
-      <div className="px-3 py-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center flex-shrink-0">
-            <span className="text-sidebar-accent-foreground text-xs font-medium">
+      {/* User footer */}
+      <div className="px-3 py-3 border-t border-sidebar-border">
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0">
+            <span className="text-primary text-[11px] font-semibold">
               {(user?.name ?? "U")[0].toUpperCase()}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sidebar-foreground text-xs font-medium truncate">{user?.name ?? "User"}</p>
-            <p className="text-sidebar-foreground/50 text-xs truncate">{isAdmin ? "Admin" : "Contributor"}</p>
+            <p className="text-foreground text-[12px] font-medium truncate">{user?.name ?? "User"}</p>
+            <p className="text-muted-foreground text-[11px] truncate">{isAdmin ? "Admin" : "Contributor"}</p>
           </div>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 text-xs px-2"
+          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-white/5 text-[12px] px-2 h-7"
           onClick={() => logout()}
         >
-          <LogOut size={14} className="mr-2" />
+          <LogOut size={13} className="mr-2" />
           Sign out
         </Button>
       </div>
@@ -167,19 +202,19 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col">
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col border-r border-sidebar-border">
             <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
-              <span className="text-sidebar-foreground font-semibold text-sm">Menu</span>
+              <span className="text-foreground font-semibold text-sm">Menu</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-sidebar-foreground/70 hover:text-sidebar-foreground h-8 w-8"
+                className="text-muted-foreground hover:text-foreground h-7 w-7"
                 onClick={() => setSidebarOpen(false)}
               >
-                <X size={16} />
+                <X size={15} />
               </Button>
             </div>
             <SidebarContent />
@@ -194,22 +229,22 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 text-muted-foreground"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu size={18} />
+            <Menu size={17} />
           </Button>
           <div className="flex items-center gap-2">
-            <Leaf size={18} className="text-primary" />
-            <span className="font-semibold text-sm text-foreground">Absolute Aromas</span>
+            <Leaf size={16} className="text-primary" />
+            <span className="font-semibold text-[13px] text-foreground">Absolute Aromas</span>
           </div>
         </header>
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           {title && (
-            <div className="border-b border-border bg-card px-6 py-4">
-              <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+            <div className="border-b border-border bg-card/50 px-6 py-3.5">
+              <h1 className="text-[15px] font-semibold text-foreground">{title}</h1>
             </div>
           )}
           <div className="p-6">{children}</div>

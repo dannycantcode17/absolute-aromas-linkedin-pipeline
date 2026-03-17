@@ -6,14 +6,14 @@ import { format } from "date-fns";
 import { Loader2, History } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_confirmation: "bg-amber-100 text-amber-800",
-  pending_style_guide: "bg-blue-100 text-blue-800",
-  generating: "bg-purple-100 text-purple-800",
-  pending_guardrail: "bg-red-100 text-red-800",
-  pending_approval: "bg-yellow-100 text-yellow-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-gray-100 text-gray-600",
-  published: "bg-emerald-100 text-emerald-800",
+  pending_confirmation: "bg-amber-500/15 text-amber-400",
+  pending_style_guide: "bg-cyan-500/10 text-cyan-400",
+  generating: "bg-cyan-500/10 text-cyan-400",
+  pending_guardrail: "bg-red-500/15 text-red-400",
+  pending_approval: "bg-amber-500/15 text-amber-400",
+  approved: "bg-cyan-500/15 text-cyan-400",
+  rejected: "bg-white/5 text-muted-foreground",
+  published: "bg-cyan-500/15 text-cyan-400",
 };
 
 export default function HistoryPage() {

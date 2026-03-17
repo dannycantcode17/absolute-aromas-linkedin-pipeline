@@ -110,7 +110,7 @@ function PublishConfirmModal({
             Cancel
           </Button>
           <Button
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
             onClick={handleConfirm}
             disabled={markPublishedMutation.isPending || !url.trim()}
           >
@@ -207,7 +207,7 @@ function CalendarView({
                   key={post.id}
                   className={`rounded px-1 py-0.5 mb-0.5 truncate cursor-pointer ${
                     post.publishedAt
-                      ? "bg-emerald-100 text-emerald-800"
+                      ? "bg-cyan-500/15 text-cyan-400"
                       : "bg-primary/10 text-primary"
                   }`}
                   title={job.topic}
@@ -248,7 +248,7 @@ function CalendarView({
                   </Button>
                   <Button
                     size="sm"
-                    className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="h-7 px-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={() => onMarkPublished(post.id)}
                   >
                     <CheckSquare size={12} />
@@ -322,7 +322,7 @@ export default function QueuePage() {
                 <List size={14} />
                 List
                 {pending.length > 0 && (
-                  <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-1">{pending.length}</Badge>
+                  <Badge className="bg-amber-500/15 text-amber-400 text-xs ml-1">{pending.length}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="calendar" className="gap-1.5">
@@ -344,15 +344,15 @@ export default function QueuePage() {
                       return (
                         <Card
                           key={post.id}
-                          className={`${overdue ? "border-orange-300 bg-orange-50/20" : "border-green-200 bg-green-50/20"}`}
+                          className={`${overdue ? "border-amber-500/30 bg-amber-500/8" : "border-primary/25 bg-primary/5"}`}
                         >
                           <CardHeader className="pb-2 pt-3 px-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <Badge className="bg-green-100 text-green-800 text-xs">Approved</Badge>
+                                  <Badge className="bg-cyan-500/15 text-cyan-400 text-xs">Approved</Badge>
                                   {overdue && (
-                                    <Badge className="bg-orange-100 text-orange-800 text-xs flex items-center gap-1">
+                                    <Badge className="bg-amber-500/15 text-amber-400 text-xs flex items-center gap-1">
                                       <AlertTriangle size={10} />
                                       Overdue
                                     </Badge>
@@ -383,7 +383,7 @@ export default function QueuePage() {
                                 onClick={() => copyToClipboard(post.content, post.id)}
                               >
                                 {copiedId === post.id ? (
-                                  <><Check size={13} className="mr-1.5 text-green-600" />Copied</>
+                                  <><Check size={13} className="mr-1.5 text-primary" />Copied</>
                                 ) : (
                                   <><Copy size={13} className="mr-1.5" />Copy</>
                                 )}
@@ -401,7 +401,7 @@ export default function QueuePage() {
                                 asChild
                                 variant="outline"
                                 size="sm"
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                className="text-primary border-primary/30 hover:bg-primary/8"
                               >
                                 <a
                                   href={
@@ -418,7 +418,7 @@ export default function QueuePage() {
                               </Button>
                               <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                                 onClick={() => setPublishModalPostId(post.id)}
                               >
                                 <CheckSquare size={13} className="mr-1.5" />
@@ -446,7 +446,7 @@ export default function QueuePage() {
                           <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <Badge className="bg-emerald-100 text-emerald-800 text-xs">Published</Badge>
+                                <Badge className="bg-cyan-500/15 text-cyan-400 text-xs">Published</Badge>
                                 <span className="text-xs text-muted-foreground">
                                   {job.profile === "aa_company" ? "AA Company" : "David Personal"}
                                 </span>
@@ -459,7 +459,7 @@ export default function QueuePage() {
                               </p>
                             </div>
                             {post.linkedInUrl && (
-                              <Button asChild variant="ghost" size="sm" className="text-blue-600 h-7 px-2">
+                              <Button asChild variant="ghost" size="sm" className="text-primary h-7 px-2">
                                 <a href={post.linkedInUrl} target="_blank" rel="noopener noreferrer">
                                   <ExternalLink size={13} className="mr-1" />
                                   View Post

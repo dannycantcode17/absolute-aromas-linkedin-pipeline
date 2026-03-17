@@ -12,6 +12,7 @@ import QueuePage from "./pages/QueuePage";
 import HistoryPage from "./pages/HistoryPage";
 import AdminPage from "./pages/AdminPage";
 import JobDetailPage from "./pages/JobDetailPage";
+import IdeaGenerator from "./pages/IdeaGenerator";
 
 function Router() {
   return (
@@ -20,10 +21,12 @@ function Router() {
       <Route path="/submit" component={SubmitJob} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/job/:id" component={JobDetailPage} />
+      <Route path="/jobs/:id" component={JobDetailPage} />
       <Route path="/approve/:token" component={ApprovalPage} />
       <Route path="/queue" component={QueuePage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/ideas" component={IdeaGenerator} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -33,7 +36,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />
