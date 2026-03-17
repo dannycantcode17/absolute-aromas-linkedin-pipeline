@@ -130,6 +130,19 @@ export const posts = mysqlTable("posts", {
   publishedAt: timestamp("publishedAt"),
   /** Who marked it published */
   publishedBy: varchar("publishedBy", { length: 64 }),
+  /** The live LinkedIn post URL — required to confirm actual publication */
+  linkedInUrl: text("linkedInUrl"),
+  /**
+   * publication_status tracks whether the approved post has been confirmed live:
+   * queued           → approved, not yet published
+   * pending_confirm  → Mark Published clicked, awaiting LinkedIn URL entry
+   * confirmed        → LinkedIn URL provided, post confirmed live
+   */
+  publicationStatus: mysqlEnum("publicationStatus", [
+    "queued",
+    "pending_confirm",
+    "confirmed",
+  ]).default("queued"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

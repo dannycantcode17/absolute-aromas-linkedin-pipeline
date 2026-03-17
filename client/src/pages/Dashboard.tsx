@@ -1,11 +1,25 @@
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
-import { PenLine, RefreshCw, Clock, CheckCircle, XCircle, AlertTriangle, Loader2, Eye } from "lucide-react";
+import {
+  PenLine,
+  RefreshCw,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  Eye,
+  TrendingUp,
+  Shield,
+  Timer,
+  CheckSquare,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const STATUS_LABELS: Record<string, string> = {
   pending_confirmation: "Awaiting Confirmation",
@@ -41,10 +55,19 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 15000 });
-  const jobs = jobsQuery.data ?? [];
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
-  const stats = {
+  const jobsQuery = trpc.jobs.list.useQuery(undefined, { refetchInterval: 15000 });
+  const analyticsQuery = trpc.queue.analytics.useQuery(undefined, {
+    enabled: isAdmin,
+    refetchInterval: 60000,
+  });
+
+  const jobs = jobsQuery.data ?? [];
+  const analytics = analyticsQuery.data;
+
+  const localStats = {
     total: jobs.length,
     pending: jobs.filter((j) => ["pending_approval", "pending_guardrail"].includes(j.status)).length,
     approved: jobs.filter((j) => j.status === "approved").length,
@@ -53,13 +76,71 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      {/* Stats */}
+      {/* ── Analytics strip (admin only) ── */}
+      {isAdmin && analytics && (
+        <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <p className="text-xs font-semibold text-primary mb-3 uppercase tracking-wide">Pipeline Health</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              {
+                icon: <PenLine size={14} className="text-primary" />,
+                label: "Total Generated",
+                value: analytics.totalGenerated,
+                suffix: "",
+              },
+              {
+                icon: <TrendingUp size={14} className="text-green-600" />,
+                label: "Approval Rate",
+                value: analytics.approvalRate,
+                suffix: "%",
+              },
+              {
+                icon: <Timer size={14} className="text-blue-600" />,
+                label: "Avg. Time to Approve",
+                value: analytics.avgHoursToApproval,
+                suffix: "h",
+              },
+              {
+                icon: <Shield size={14} className="text-orange-500" />,
+                label: "Guardrail Flag Rate",
+                value: analytics.flagRate,
+                suffix: "%",
+              },
+              {
+                icon: <Clock size={14} className="text-yellow-600" />,
+                label: "In Queue",
+                value: analytics.queueCount,
+                suffix: "",
+              },
+              {
+                icon: <CheckSquare size={14} className="text-emerald-600" />,
+                label: "Confirmed Live",
+                value: analytics.publishedCount,
+                suffix: "",
+              },
+            ].map((stat) => (
+              <div key={stat.label} className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  {stat.icon}
+                  <span className="text-xs">{stat.label}</span>
+                </div>
+                <span className="text-xl font-bold text-foreground">
+                  {stat.value}
+                  <span className="text-sm font-normal text-muted-foreground">{stat.suffix}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Basic stats ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total Jobs", value: stats.total, color: "text-foreground" },
-          { label: "Awaiting Action", value: stats.pending, color: "text-yellow-600" },
-          { label: "Approved", value: stats.approved, color: "text-green-600" },
-          { label: "Published", value: stats.published, color: "text-emerald-600" },
+          { label: "Total Jobs", value: localStats.total, color: "text-foreground" },
+          { label: "Awaiting Action", value: localStats.pending, color: "text-yellow-600" },
+          { label: "Approved", value: localStats.approved, color: "text-green-600" },
+          { label: "Published", value: localStats.published, color: "text-emerald-600" },
         ].map((stat) => (
           <Card key={stat.label} className="border-border">
             <CardContent className="pt-4 pb-4">
@@ -70,7 +151,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Actions */}
+      {/* ── Actions row ── */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-medium text-foreground">Recent Jobs</h2>
         <div className="flex gap-2">
@@ -92,7 +173,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Jobs list */}
+      {/* ── Jobs list ── */}
       {jobsQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="animate-spin text-muted-foreground" size={24} />

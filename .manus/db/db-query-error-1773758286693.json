@@ -1,0 +1,8 @@
+{
+  "query": "\n-- Update Danny's email\nUPDATE approver_config SET name = 'Danny', email = 'danny@absolute-aromas.com' WHERE approver_role = 'danny';\n\n-- Update David's email  \nUPDATE approver_config SET name = 'David', email = 'David@absolute-aromas.com' WHERE approver_role = 'david';\n\n-- Verify the update\nSELECT approver_role, name, email FROM approver_config;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute \n-- Update Danny's email\nUPDATE approver_config SET name = 'Danny', email = 'danny@absolute-aromas.com' WHERE approver_role = 'danny';\n\n-- Update David's email  \nUPDATE approver_config SET name = 'David', email = 'David@absolute-aromas.com' WHERE approver_role = 'david';\n\n-- Verify the update\nSELECT approver_role, name, email FROM approver_config;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 3: Unknown column 'approver_role' in 'where clause'"
+  ]
+}

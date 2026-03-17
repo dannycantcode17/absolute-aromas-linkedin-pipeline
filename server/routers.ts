@@ -472,9 +472,14 @@ export const appRouter = router({
       return getReadyToPostQueue();
     }),
 
-    /** Mark a post as manually published */
+    /** Mark a post as manually published — requires LinkedIn URL to confirm */
     markPublished: protectedProcedure
-      .input(z.object({ postId: z.number().int() }))
+      .input(
+        z.object({
+          postId: z.number().int(),
+          linkedInUrl: z.string().url({ message: "Please enter the live LinkedIn post URL" }),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
 
@@ -484,19 +489,36 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Post is not in approved status" });
         }
 
+        // Validate the URL looks like a LinkedIn post URL
+        if (!input.linkedInUrl.includes("linkedin.com")) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "URL must be a LinkedIn post URL (linkedin.com)",
+          });
+        }
+
         const publisherName = ctx.user.name ?? ctx.user.openId;
-        await markPostPublished(input.postId, publisherName);
+        await markPostPublished(input.postId, publisherName, input.linkedInUrl);
+
+        await updateJobStatus(post.jobId, "published");
 
         await addAuditEntry({
           jobId: post.jobId,
           postId: input.postId,
           actor: publisherName,
-          action: "marked_published",
-          details: { publishedBy: publisherName },
+          action: "confirmed_published",
+          details: { publishedBy: publisherName, linkedInUrl: input.linkedInUrl },
         });
 
         return { success: true };
       }),
+
+    /** Get analytics data for the dashboard strip */
+    analytics: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { getQueueAnalytics } = await import("./db");
+      return getQueueAnalytics();
+    }),
   }),
 
   // ─── Guardrail Reviews ─────────────────────────────────────────────────────

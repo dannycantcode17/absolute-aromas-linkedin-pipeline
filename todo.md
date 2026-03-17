@@ -47,3 +47,13 @@
 - [x] David's guide: how to submit and approve
 - [x] Danny's guide: queue management, marking published
 - [x] Style guide management notes
+
+## V2 Improvements
+- [x] Content calendar view on Queue page (monthly/weekly, posts plotted by suggested publish date)
+- [x] Dashboard analytics strip (posts generated, approval rate, avg time-to-approval, flag rate)
+- [x] Side-by-side variant comparison on Approval page (Compare / List toggle, character count, per-variant copy)
+- [x] Publication confirmation flow: modal asking for LinkedIn post URL when marking published
+- [x] Store linkedInUrl and publicationStatus on post record (schema migration applied)
+- [x] Overdue badge on Queue cards (approved but not published after 7 days)
+- [x] Seed approver config: Danny danny@absolute-aromas.com, David David@absolute-aromas.com
+- [x] Add Harriet (Harriet@absolute-aromas.com) and Amy Klaire (AmyK@absolute-aromas.com) to admin panel team list

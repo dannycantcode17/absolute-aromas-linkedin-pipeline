@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `posts` ADD `linkedInUrl` text;\nALTER TABLE `posts` ADD `publicationStatus` enum('queued','pending_confirm','confirmed') DEFAULT 'queued';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute ALTER TABLE `posts` ADD `linkedInUrl` text;\nALTER TABLE `posts` ADD `publicationStatus` enum('queued','pending_confirm','confirmed') DEFAULT 'queued';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3071
+}

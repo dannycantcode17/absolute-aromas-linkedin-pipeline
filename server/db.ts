@@ -197,16 +197,19 @@ export async function getReadyToPostQueue() {
     .orderBy(desc(posts.approvedAt));
 }
 
-export async function markPostPublished(postId: number, publishedBy: string) {
+export async function markPostPublished(postId: number, publishedBy: string, linkedInUrl: string) {
   const db = await getDb();
   if (!db) return;
   await db
     .update(posts)
-    .set({ publishedAt: new Date(), publishedBy, status: "approved" })
+    .set({
+      publishedAt: new Date(),
+      publishedBy,
+      linkedInUrl,
+      publicationStatus: "confirmed",
+      status: "approved",
+    })
     .where(eq(posts.id, postId));
-  // Update parent job status
-  const post = await getPostById(postId);
-  if (post) await updateJobStatus(post.jobId, "published");
 }
 
 export async function supersedePreviousIterations(jobId: number, currentIteration: number) {
@@ -315,6 +318,42 @@ export async function getAuditLog(jobId?: number) {
     return db.select().from(auditLog).where(eq(auditLog.jobId, jobId)).orderBy(auditLog.createdAt);
   }
   return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(200);
+}
+
+export async function getQueueAnalytics() {
+  const db = await getDb();
+  if (!db) return { totalGenerated: 0, approvalRate: 0, avgHoursToApproval: 0, flagRate: 0, queueCount: 0, publishedCount: 0 };
+
+  const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(500);
+  const allPosts = await db.select().from(posts).orderBy(desc(posts.createdAt)).limit(500);
+
+  const totalGenerated = allJobs.length;
+  const approvedJobs = allJobs.filter((j) => j.status === "approved" || j.status === "published");
+  const rejectedJobs = allJobs.filter((j) => j.status === "rejected");
+  const approvalRate = totalGenerated > 0
+    ? Math.round((approvedJobs.length / Math.max(approvedJobs.length + rejectedJobs.length, 1)) * 100)
+    : 0;
+
+  // Average hours from job creation to post approval
+  const approvedPosts = allPosts.filter((p) => p.status === "approved" && p.approvedAt);
+  const avgHoursToApproval = approvedPosts.length > 0
+    ? Math.round(
+        approvedPosts.reduce((sum, p) => {
+          const job = allJobs.find((j) => j.id === p.jobId);
+          if (!job || !p.approvedAt) return sum;
+          return sum + (p.approvedAt.getTime() - job.createdAt.getTime()) / (1000 * 60 * 60);
+        }, 0) / approvedPosts.length
+      )
+    : 0;
+
+  // Flag rate: jobs that hit pending_guardrail at some point
+  const flaggedPosts = allPosts.filter((p) => p.status === "flagged" || (p.guardrailFlags && (p.guardrailFlags as unknown[]).length > 0));
+  const flagRate = totalGenerated > 0 ? Math.round((flaggedPosts.length / Math.max(allPosts.length, 1)) * 100) : 0;
+
+  const queueCount = allPosts.filter((p) => p.status === "approved" && !p.publishedAt).length;
+  const publishedCount = allPosts.filter((p) => p.publicationStatus === "confirmed").length;
+
+  return { totalGenerated, approvalRate, avgHoursToApproval, flagRate, queueCount, publishedCount };
 }
 
 export async function getUnsyncedAuditEntries() {

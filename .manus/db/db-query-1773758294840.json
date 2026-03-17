@@ -1,0 +1,20 @@
+{
+  "query": "\nUPDATE approver_config SET name = 'Danny', email = 'danny@absolute-aromas.com' WHERE approverRole = 'danny';\nUPDATE approver_config SET name = 'David', email = 'David@absolute-aromas.com' WHERE approverRole = 'david';\nSELECT approverRole, name, email FROM approver_config;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute \nUPDATE approver_config SET name = 'Danny', email = 'danny@absolute-aromas.com' WHERE approverRole = 'danny';\nUPDATE approver_config SET name = 'David', email = 'David@absolute-aromas.com' WHERE approverRole = 'david';\nSELECT approverRole, name, email FROM approver_config;\n",
+  "rows": [
+    {
+      "approverRole": "danny",
+      "name": "Danny",
+      "email": "danny@absolute-aromas.com"
+    },
+    {
+      "approverRole": "david",
+      "name": "David",
+      "email": "David@absolute-aromas.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "approverRole\tname\temail\ndanny\tDanny\tdanny@absolute-aromas.com\ndavid\tDavid\tDavid@absolute-aromas.com\n",
+  "stderr": "",
+  "execution_time_ms": 233
+}
