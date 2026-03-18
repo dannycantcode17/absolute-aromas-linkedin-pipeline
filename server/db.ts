@@ -497,6 +497,39 @@ export async function getDashboardStats() {
   return { postsThisWeek, inQueue, awaitingApproval, avgPostsPerWeek, contentFlags, pillarDistribution, calendarData, pendingApprovalJobIds };
 }
 
+// ─── Topic gap analysis for Idea Generator smart toggle ─────────────────────
+
+export async function getTopicGapAnalysis(): Promise<{ pillar: string; daysSinceLastPost: number; totalPosts: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const allJobs = await db.select().from(jobs);
+  const publishedPosts = await db
+    .select({ jobId: posts.jobId, publishedAt: posts.publishedAt })
+    .from(posts)
+    .where(and(eq(posts.publicationStatus, "confirmed"), isNotNull(posts.publishedAt)));
+  // Build a map of pillar -> most recent published date and total count
+  const pillarMap: Record<string, { lastDate: Date; count: number }> = {};
+  for (const post of publishedPosts) {
+    if (!post.publishedAt) continue;
+    const job = allJobs.find((j) => j.id === post.jobId);
+    if (!job?.contentPillar) continue;
+    const existing = pillarMap[job.contentPillar];
+    if (!existing || post.publishedAt > existing.lastDate) {
+      pillarMap[job.contentPillar] = { lastDate: post.publishedAt, count: (existing?.count ?? 0) + 1 };
+    } else {
+      pillarMap[job.contentPillar].count++;
+    }
+  }
+  const now = new Date();
+  return Object.entries(pillarMap)
+    .map(([pillar, { lastDate, count }]) => ({
+      pillar,
+      daysSinceLastPost: Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)),
+      totalPosts: count,
+    }))
+    .sort((a, b) => b.daysSinceLastPost - a.daysSinceLastPost);
+}
+
 // ─── Published posts for History page (v4 simplified) ────────────────────────
 
 export async function getPublishedPosts() {

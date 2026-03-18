@@ -24,9 +24,11 @@ import {
   BookmarkCheck,
   Building2,
   User,
+  Clock,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import AppLayout from "@/components/AppLayout";
-import { AA_COMPANY_PILLARS, DAVID_PERSONAL_PILLARS } from "@/lib/pillars";
+import { AA_COMPANY_PILLARS, DAVID_PERSONAL_PILLARS, BLOG_PILLARS } from "@/lib/pillars";
 
 type Idea = {
   id: number;
@@ -67,8 +69,9 @@ export default function IdeaGenerator() {
   const [, navigate] = useLocation();
 
   const [promptTopic, setPromptTopic] = useState("");
-  const [profile, setProfile] = useState<"aa_company" | "david_personal" | "both">("both");
+  const [profile, setProfile] = useState<"aa_company" | "david_personal" | "blog_post" | "both">("both");
   const [contentPillar, setContentPillar] = useState<string>("any");
+  const [findTopicGap, setFindTopicGap] = useState(false);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -108,6 +111,8 @@ export default function IdeaGenerator() {
       ? AA_COMPANY_PILLARS
       : profile === "david_personal"
       ? DAVID_PERSONAL_PILLARS
+      : profile === "blog_post"
+      ? BLOG_PILLARS
       : [...AA_COMPANY_PILLARS, ...DAVID_PERSONAL_PILLARS];
 
   // Derive saved count from DB state (savedAt), not from local Set
@@ -168,6 +173,7 @@ export default function IdeaGenerator() {
                   <SelectItem value="both">Both profiles</SelectItem>
                   <SelectItem value="aa_company">AA Company Page</SelectItem>
                   <SelectItem value="david_personal">David Personal Page</SelectItem>
+                  <SelectItem value="blog_post">Blog Post</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -182,25 +188,39 @@ export default function IdeaGenerator() {
               </Select>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => generateMutation.mutate({
-                promptTopic: promptTopic.trim() || "broad mix of brand-aligned topics",
-                profile: profile === "both" ? undefined : profile,
-                contentPillar: contentPillar === "any" ? undefined : contentPillar,
-              })}
-              disabled={generateMutation.isPending}
-              className="gap-2"
-            >
-              {generateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {generateMutation.isPending ? "Generating…" : "Generate 10 Ideas"}
-            </Button>
-            {hasGenerated && (
-              <Button variant="ghost" size="sm" className="text-muted-foreground"
-                onClick={() => { setIdeas([]); setHasGenerated(false); setPromptTopic(""); }}>
-                Clear
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => generateMutation.mutate({
+                  promptTopic: promptTopic.trim() || "broad mix of brand-aligned topics",
+                  profile: (profile === "both" ? undefined : profile) as "aa_company" | "david_personal" | undefined,
+                  contentPillar: contentPillar === "any" ? undefined : contentPillar,
+                  findTopicGap,
+                })}
+                disabled={generateMutation.isPending}
+                className="gap-2"
+              >
+                {generateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {generateMutation.isPending ? "Generating…" : "Generate 10 Ideas"}
               </Button>
-            )}
+              {hasGenerated && (
+                <Button variant="ghost" size="sm" className="text-muted-foreground"
+                  onClick={() => { setIdeas([]); setHasGenerated(false); setPromptTopic(""); }}>
+                  Clear
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="topic-gap"
+                checked={findTopicGap}
+                onCheckedChange={setFindTopicGap}
+              />
+              <Label htmlFor="topic-gap" className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer select-none">
+                <Clock size={11} />
+                Find a topic we haven't done in a while
+              </Label>
+            </div>
           </div>
         </div>
 

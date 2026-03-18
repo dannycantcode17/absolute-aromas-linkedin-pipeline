@@ -21,4 +21,13 @@ export const DAVID_PERSONAL_PILLARS: string[] = [
   "Industry History & Evolution",
 ];
 
+export const BLOG_PILLARS: string[] = [
+  "Essential Oil Education",
+  "Private Label Insights",
+  "Manufacturing & Quality",
+  "Industry Trends",
+  "Sourcing & Sustainability",
+  "Brand Building",
+];
+
 export const ALL_PILLARS: string[] = [...AA_COMPANY_PILLARS, ...DAVID_PERSONAL_PILLARS];

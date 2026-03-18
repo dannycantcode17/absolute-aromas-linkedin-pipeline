@@ -226,7 +226,7 @@ export default function SavedIdeasPage() {
                   variant="ghost"
                   size="sm"
                   className="text-xs gap-1 text-cyan-400"
-                  onClick={() => navigate("/idea-generator")}
+                  onClick={() => navigate("/ideas")}
                 >
                   Generate ideas <ChevronRight size={11} />
                 </Button>
@@ -255,7 +255,7 @@ export default function SavedIdeasPage() {
             )}
           </div>
           <div className="p-3 border-t border-border">
-            <Button variant="ghost" size="sm" className="w-full gap-1.5 text-xs" onClick={() => navigate("/idea-generator")}>
+            <Button variant="ghost" size="sm" className="w-full gap-1.5 text-xs" onClick={() => navigate("/ideas")}>
               <Sparkles size={11} />
               Generate more ideas
             </Button>

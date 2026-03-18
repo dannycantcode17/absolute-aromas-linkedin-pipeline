@@ -664,10 +664,12 @@ export const appRouter = router({
           promptTopic: z.string().min(5).max(500),
           contentPillar: z.string().optional(),
           profile: z.enum(["aa_company", "david_personal", "both"]).default("both"),
+          findTopicGap: z.boolean().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
         const { invokeLLM } = await import("./_core/llm");
+        const { getTopicGapAnalysis } = await import("./db");
         const allPillars = [...AA_COMPANY_PILLARS, ...DAVID_PERSONAL_PILLARS];
         const pillarList = allPillars.map((p) => `- ${p}`).join("\n");
 
@@ -677,6 +679,21 @@ export const appRouter = router({
             : input.profile === "david_personal"
             ? "David Tomlinson Personal Page (thought leadership, founder perspective, industry insider)"
             : "either the Absolute Aromas Company Page or David Tomlinson's Personal Page";
+
+        // Build topic gap context if toggle is on
+        let topicGapContext = "";
+        if (input.findTopicGap) {
+          const gapData = await getTopicGapAnalysis();
+          if (gapData.length > 0) {
+            const gapLines = gapData
+              .slice(0, 10)
+              .map((g) => `- ${g.pillar}: last posted ${g.daysSinceLastPost} days ago (${g.totalPosts} total posts)`)
+              .join("\n");
+            topicGapContext = `\n\nTOPIC GAP ANALYSIS (sorted by most overdue):\n${gapLines}\nThe user wants ideas that address underrepresented pillars. Bias your suggestions toward pillars that haven\'t appeared recently, but use your judgement — if a pillar is overdue but a fresher angle exists on a slightly less overdue pillar, prefer quality over mechanical rotation.`;
+          } else {
+            topicGapContext = "\n\nNo post history found yet — generate a broad mix across all pillars.";
+          }
+        }
 
         const systemPrompt = `You are a LinkedIn content strategist for Absolute Aromas, a UK-based essential oil manufacturer and private label specialist.
 
@@ -696,7 +713,7 @@ For each idea return:
 - description: 2-3 sentences explaining the specific angle, what data/story/insight to use, and why it will resonate
 - suggestedPillar: The best matching content pillar from the list above
 - suggestedProfile: "aa_company" or "david_personal"
-- rationale: One sentence on why this fits the Absolute Aromas brand voice`;
+- rationale: One sentence on why this fits the Absolute Aromas brand voice${topicGapContext}`;
 
         const userPrompt = `Generate 10 LinkedIn content ideas for ${profileContext}.
 
