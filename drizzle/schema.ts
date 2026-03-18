@@ -59,9 +59,10 @@ export const jobs = mysqlTable("jobs", {
   /**
    * Job lifecycle:
    * pending_confirmation → waiting for named-client secondary confirmation
-   * pending_style_guide  → Notion unreachable, queued for retry
+   * pending_style_guide  → style guide not configured
    * generating           → Claude is running
-   * pending_guardrail    → guardrail flags need manual review
+   * drafting             → single draft generated, awaiting user review in Saved Ideas
+   * pending_guardrail    → guardrail flags detected, shown in Approval Queue
    * pending_approval     → drafts sent to approver
    * approved             → one variant approved, in ready queue
    * rejected             → rejected by approver
@@ -71,6 +72,7 @@ export const jobs = mysqlTable("jobs", {
     "pending_confirmation",
     "pending_style_guide",
     "generating",
+    "drafting",
     "pending_guardrail",
     "pending_approval",
     "approved",

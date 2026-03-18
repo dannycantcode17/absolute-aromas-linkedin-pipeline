@@ -15,18 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Loader2,
   Sparkles,
-  Plus,
   X,
-  CheckCircle,
   ChevronRight,
   Lightbulb,
   Bookmark,
@@ -42,32 +33,32 @@ type Idea = {
   title: string;
   description: string;
   suggestedPillar: string | null;
-  suggestedProfile: "aa_company" | "david_personal" | null;
+  suggestedProfile: "aa_company" | "david_personal" | "blog_post" | null;
   rationale: string | null;
   status: "pending" | "queued" | "rejected";
+  savedAt: string | null;
   jobId: number | null;
 };
 
-type QueueDialogState = {
-  open: boolean;
-  idea: Idea | null;
-  profile: "aa_company" | "david_personal";
-  contentPillar: string;
-  toneHint: string;
-};
-
-function ProfileBadge({ profile }: { profile: "aa_company" | "david_personal" | null }) {
+function ProfileBadge({ profile }: { profile: "aa_company" | "david_personal" | "blog_post" | null }) {
   if (profile === "david_personal") {
     return (
       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        <User size={9} /> David
+        <User size={9} /> David Personal
+      </span>
+    );
+  }
+  if (profile === "blog_post") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+        <Lightbulb size={9} /> Blog Post
       </span>
     );
   }
   if (profile === null) return null;
   return (
     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-      <Building2 size={9} /> AA
+      <Building2 size={9} /> AA Company
     </span>
   );
 }
@@ -80,19 +71,10 @@ export default function IdeaGenerator() {
   const [contentPillar, setContentPillar] = useState<string>("any");
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
-  const [queueDialog, setQueueDialog] = useState<QueueDialogState>({
-    open: false,
-    idea: null,
-    profile: "aa_company",
-    contentPillar: "",
-    toneHint: "",
-  });
 
   const generateMutation = trpc.ideas.generate.useMutation({
     onSuccess: (data) => {
       setIdeas(data.ideas as Idea[]);
-      setSavedIds(new Set());
       setHasGenerated(true);
       toast.success(`${data.ideas.length} ideas generated`);
     },
@@ -100,19 +82,15 @@ export default function IdeaGenerator() {
   });
 
   const saveMutation = trpc.ideas.save.useMutation({
-    onError: (err) => toast.error(err.message),
-  });
-
-  const addToQueueMutation = trpc.ideas.addToQueue.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (_, vars) => {
+      // Update local state to reflect savedAt — derive from DB response
       setIdeas((prev) =>
         prev.map((i) =>
-          i.id === queueDialog.idea?.id ? { ...i, status: "queued", jobId: data.jobId } : i
+          i.id === vars.ideaId ? { ...i, savedAt: new Date().toISOString() } : i
         )
       );
-      setQueueDialog((d) => ({ ...d, open: false }));
-      toast.success("Added to generation queue", {
-        action: { label: "View Job", onClick: () => navigate(`/jobs/${data.jobId}`) },
+      toast.success("Idea saved — find it in Saved Ideas", {
+        action: { label: "Go there", onClick: () => navigate("/saved-ideas") },
       });
     },
     onError: (err) => toast.error(err.message),
@@ -132,27 +110,16 @@ export default function IdeaGenerator() {
       ? DAVID_PERSONAL_PILLARS
       : [...AA_COMPANY_PILLARS, ...DAVID_PERSONAL_PILLARS];
 
-  const queuedCount = ideas.filter((i) => i.status === "queued").length;
-  const savedCount = savedIds.size;
-
-  function openQueueDialog(idea: Idea) {
-    setQueueDialog({
-      open: true,
-      idea,
-      profile: idea.suggestedProfile ?? "aa_company",
-      contentPillar: idea.suggestedPillar ?? "",
-      toneHint: "",
-    });
-  }
+  // Derive saved count from DB state (savedAt), not from local Set
+  const savedCount = ideas.filter((i) => i.savedAt !== null && i.status !== "rejected").length;
 
   function toggleSave(idea: Idea) {
-    if (savedIds.has(idea.id)) {
-      setSavedIds((prev) => { const next = new Set(prev); next.delete(idea.id); return next; });
-    } else {
-      setSavedIds((prev) => { const next = new Set(prev); next.add(idea.id); return next; });
-      saveMutation.mutate({ ideaId: idea.id });
-      toast.success("Idea saved — find it in Saved Ideas");
+    if (idea.savedAt) {
+      // Already saved — no unsave action (ideas persist in Saved Ideas until deleted there)
+      toast.info("This idea is already in Saved Ideas. Delete it there if you no longer want it.");
+      return;
     }
+    saveMutation.mutate({ ideaId: idea.id });
   }
 
   return (
@@ -166,7 +133,7 @@ export default function IdeaGenerator() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Describe a theme or leave it blank for a broad mix. Claude generates 10 brand-aligned ideas.
-              Tick the ones worth keeping — they go to <strong>Saved Ideas</strong>.
+              Tick the ones worth keeping — they go straight to <strong>Saved Ideas</strong> where you can draft and submit them.
             </p>
           </div>
           {savedCount > 0 && (
@@ -230,7 +197,7 @@ export default function IdeaGenerator() {
             </Button>
             {hasGenerated && (
               <Button variant="ghost" size="sm" className="text-muted-foreground"
-                onClick={() => { setIdeas([]); setSavedIds(new Set()); setHasGenerated(false); setPromptTopic(""); }}>
+                onClick={() => { setIdeas([]); setHasGenerated(false); setPromptTopic(""); }}>
                 Clear
               </Button>
             )}
@@ -253,18 +220,16 @@ export default function IdeaGenerator() {
                   <Bookmark size={10} /> {savedCount} saved
                 </span>
               )}
-              {queuedCount > 0 && <span className="text-primary font-medium">{queuedCount} queued</span>}
             </div>
             {ideas.map((idea, idx) => (
               <IdeaCard
                 key={idea.id}
                 idea={idea}
                 index={idx + 1}
-                isSaved={savedIds.has(idea.id)}
+                isSaved={idea.savedAt !== null}
+                isSaving={saveMutation.isPending && saveMutation.variables?.ideaId === idea.id}
                 onToggleSave={() => toggleSave(idea)}
-                onAddToQueue={() => openQueueDialog(idea)}
                 onReject={() => rejectMutation.mutate({ ideaId: idea.id })}
-                onViewJob={() => idea.jobId && navigate(`/jobs/${idea.jobId}`)}
               />
             ))}
             {savedCount > 0 && (
@@ -278,90 +243,40 @@ export default function IdeaGenerator() {
             )}
           </div>
         )}
-
-        <Dialog open={queueDialog.open} onOpenChange={(o) => setQueueDialog((d) => ({ ...d, open: o }))}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-base">Add to Generation Queue</DialogTitle>
-            </DialogHeader>
-            {queueDialog.idea && (
-              <div className="space-y-4 py-2">
-                <div className="bg-muted/50 rounded-md p-3 text-sm">
-                  <p className="font-medium text-foreground">{queueDialog.idea.title}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">{queueDialog.idea.description}</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Profile</Label>
-                  <Select value={queueDialog.profile}
-                    onValueChange={(v) => setQueueDialog((d) => ({ ...d, profile: v as "aa_company" | "david_personal" }))}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aa_company">AA Company Page</SelectItem>
-                      <SelectItem value="david_personal">David Personal Page</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Content Pillar</Label>
-                  <Select value={queueDialog.contentPillar}
-                    onValueChange={(v) => setQueueDialog((d) => ({ ...d, contentPillar: v }))}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select pillar" /></SelectTrigger>
-                    <SelectContent>
-                      {(queueDialog.profile === "aa_company" ? AA_COMPANY_PILLARS : DAVID_PERSONAL_PILLARS).map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="ghost" size="sm" onClick={() => setQueueDialog((d) => ({ ...d, open: false }))}>Cancel</Button>
-              <Button size="sm" disabled={!queueDialog.contentPillar || addToQueueMutation.isPending}
-                onClick={() => {
-                  if (!queueDialog.idea) return;
-                  addToQueueMutation.mutate({
-                    ideaId: queueDialog.idea.id,
-                    profile: queueDialog.profile,
-                    contentPillar: queueDialog.contentPillar,
-                    toneHint: queueDialog.toneHint || undefined,
-                  });
-                }}>
-                {addToQueueMutation.isPending ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <Plus size={13} className="mr-1.5" />}
-                Add to Queue
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </AppLayout>
   );
 }
 
 function IdeaCard({
-  idea, index, isSaved, onToggleSave, onAddToQueue, onReject, onViewJob,
+  idea, index, isSaved, isSaving, onToggleSave, onReject,
 }: {
-  idea: Idea; index: number; isSaved: boolean;
-  onToggleSave: () => void; onAddToQueue: () => void; onReject: () => void; onViewJob: () => void;
+  idea: Idea; index: number; isSaved: boolean; isSaving: boolean;
+  onToggleSave: () => void; onReject: () => void;
 }) {
-  const isQueued = idea.status === "queued";
   const isRejected = idea.status === "rejected";
 
   return (
     <div className={`rounded-lg border transition-all ${
       isRejected ? "opacity-35 border-border/40 bg-card/50"
-      : isQueued ? "border-primary/40 bg-primary/5"
       : isSaved ? "border-cyan-500/30 bg-cyan-500/5"
       : "border-border bg-card hover:border-border/80"
     }`}>
       <div className="p-4 flex items-start gap-3">
-        {!isRejected && !isQueued && (
+        {!isRejected && (
           <div className="mt-0.5 shrink-0">
-            <Checkbox checked={isSaved} onCheckedChange={onToggleSave}
-              className="data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500" />
+            {isSaving ? (
+              <Loader2 size={14} className="animate-spin text-cyan-400 mt-0.5" />
+            ) : (
+              <Checkbox
+                checked={isSaved}
+                onCheckedChange={onToggleSave}
+                className="data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
+              />
+            )}
           </div>
         )}
-        {(isRejected || isQueued) && (
+        {isRejected && (
           <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
             <span className="text-[10px] font-medium text-muted-foreground">{index}</span>
           </div>
@@ -369,15 +284,10 @@ function IdeaCard({
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start gap-2 flex-wrap">
             <p className="text-sm font-semibold text-foreground leading-snug flex-1">{idea.title}</p>
-            {isQueued && (
-              <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] shrink-0">
-                <CheckCircle size={9} className="mr-1" />Queued
-              </Badge>
-            )}
             {isRejected && (
               <Badge variant="outline" className="text-[10px] text-muted-foreground shrink-0">Dismissed</Badge>
             )}
-            {isSaved && !isQueued && !isRejected && (
+            {isSaved && !isRejected && (
               <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/25 text-[10px] shrink-0">
                 <Bookmark size={9} className="mr-1" />Saved
               </Badge>
@@ -396,23 +306,15 @@ function IdeaCard({
             <p className="text-[11px] text-muted-foreground/70 italic pt-0.5">{idea.rationale}</p>
           )}
         </div>
-        {!isRejected && (
-          <div className="flex items-center gap-1 shrink-0">
-            {isQueued ? (
-              <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1" onClick={onViewJob}>
-                View Job<ChevronRight size={11} />
-              </Button>
-            ) : (
-              <>
-                <Button size="sm" variant="outline" className="h-7 px-2 text-xs gap-1" onClick={onAddToQueue}>
-                  <Plus size={11} />Queue
-                </Button>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={onReject}>
-                  <X size={13} />
-                </Button>
-              </>
-            )}
-          </div>
+        {!isRejected && !isSaved && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive shrink-0"
+            onClick={onReject}
+          >
+            <X size={13} />
+          </Button>
         )}
       </div>
     </div>

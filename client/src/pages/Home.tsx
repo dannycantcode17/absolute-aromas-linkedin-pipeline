@@ -10,7 +10,7 @@ const features = [
     icon: <Sparkles size={17} className="text-primary" />,
     title: "AI-Powered Generation",
     description:
-      "Claude generates 3–5 brand-aligned post variants per submission, informed by the live Absolute Aromas style guide.",
+      "Claude generates 3–5 brand-aligned post variants per submission, informed by the Absolute Aromas style guide configured in Admin.",
   },
   {
     icon: <ShieldCheck size={17} className="text-primary" />,
@@ -22,7 +22,7 @@ const features = [
     icon: <CheckCircle size={17} className="text-primary" />,
     title: "Dual-Profile Approval",
     description:
-      "Company page posts route to Danny. David's personal page posts route to David only. No cross-approval, no auto-publish.",
+      "Company page posts route to the AA Company approver. Personal page posts route to the personal page approver only. No cross-approval, no auto-publish.",
   },
 ];
 

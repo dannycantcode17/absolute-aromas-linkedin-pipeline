@@ -155,10 +155,11 @@ export async function getPendingStyleGuideJobs() {
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
-export async function createPost(data: InsertPost) {
+export async function createPost(data: InsertPost): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(posts).values(data);
+  const result = await db.insert(posts).values(data);
+  return (result[0] as { insertId?: number })?.insertId ?? 0;
 }
 
 export async function getPostById(id: number) {
@@ -274,15 +275,15 @@ export async function resolveGuardrailReview(id: number, resolvedBy: string) {
 
 // ─── Approval Tokens ──────────────────────────────────────────────────────────
 
-export async function createApprovalToken(
-  jobId: number,
-  approverRole: "danny" | "david",
-  token: string
-) {
+export async function createApprovalToken(data: {
+  token: string;
+  jobId: number;
+  approverRole: "danny" | "david";
+  expiresAt: Date;
+}) {
   const db = await getDb();
   if (!db) return;
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-  await db.insert(approvalTokens).values({ token, jobId, approverRole, expiresAt });
+  await db.insert(approvalTokens).values(data);
 }
 
 export async function getApprovalToken(token: string) {

@@ -1,66 +1,113 @@
-import AppLayout from "@/components/AppLayout";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import {
+  Loader2,
+  Building2,
+  User,
+  BookOpen,
+  Copy,
+  CheckCircle2,
+  ExternalLink,
+  Sparkles,
+  Image as ImageIcon,
+  RotateCcw,
+  CheckSquare,
+  Check,
+  Link2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
-import {
-  format,
-  formatDistanceToNow,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameDay,
-  addMonths,
-  subMonths,
-  isToday,
-  differenceInDays,
-} from "date-fns";
-import {
-  Copy,
-  Check,
-  CheckSquare,
-  Loader2,
-  ExternalLink,
-  AlertTriangle,
-  Calendar,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  Link2,
-  Image,
-  Sparkles,
-} from "lucide-react";
-import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import AppLayout from "@/components/AppLayout";
 
-// ─── Publish Confirmation Modal ───────────────────────────────────────────────
+type Profile = "aa_company" | "david_personal" | "blog_post";
 
-function PublishConfirmModal({
+type QueueItem = {
+  post: {
+    id: number;
+    jobId: number;
+    content: string;
+    approvedAt: Date | null;
+    approvedBy: string | null;
+    variantLabel: string;
+    suggestedPublishDate?: Date | null;
+    publishedAt?: Date | null;
+    linkedInUrl?: string | null;
+    publicationStatus?: string | null;
+  };
+  job: {
+    id: number;
+    profile: Profile;
+    topic: string;
+    contentPillar: string;
+  };
+};
+
+function profileConfig(profile: Profile) {
+  if (profile === "david_personal") {
+    return {
+      label: "Next LinkedIn Post — David",
+      shortLabel: "LinkedIn · David",
+      icon: <User size={13} className="text-amber-400" />,
+      badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      accentClass: "border-amber-500/30",
+      headerClass: "text-amber-400",
+      emptyIcon: <User size={22} className="text-amber-400/25" />,
+    };
+  }
+  if (profile === "blog_post") {
+    return {
+      label: "Next Blog Post",
+      shortLabel: "Blog Post",
+      icon: <BookOpen size={13} className="text-purple-400" />,
+      badgeClass: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      accentClass: "border-purple-500/30",
+      headerClass: "text-purple-400",
+      emptyIcon: <BookOpen size={22} className="text-purple-400/25" />,
+    };
+  }
+  return {
+    label: "Next LinkedIn Post — Absolute Aromas",
+    shortLabel: "LinkedIn · AA",
+    icon: <Building2 size={13} className="text-cyan-400" />,
+    badgeClass: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    accentClass: "border-cyan-500/30",
+    headerClass: "text-cyan-400",
+    emptyIcon: <Building2 size={22} className="text-cyan-400/25" />,
+  };
+}
+
+function wordCount(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// ─── Publish Dialog ───────────────────────────────────────────────────────────
+function PublishDialog({
+  post,
   open,
-  postId,
   onClose,
 }: {
+  post: QueueItem | null;
   open: boolean;
-  postId: number | null;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState("");
   const utils = trpc.useUtils();
 
-  const markPublishedMutation = trpc.queue.markPublished.useMutation({
+  const markPublished = trpc.queue.markPublished.useMutation({
     onSuccess: () => {
-      toast.success("Post confirmed as published — LinkedIn URL saved.");
+      toast.success("Post marked as published — LinkedIn URL saved.");
       utils.queue.list.invalidate();
       setUrl("");
       onClose();
@@ -68,59 +115,42 @@ function PublishConfirmModal({
     onError: (err) => toast.error(err.message),
   });
 
-  const handleConfirm = () => {
-    if (!postId) return;
-    if (!url.trim()) {
-      toast.error("Please paste the LinkedIn post URL before confirming.");
-      return;
-    }
-    markPublishedMutation.mutate({ postId, linkedInUrl: url.trim() });
-  };
+  if (!post) return null;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { setUrl(""); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Link2 size={18} className="text-primary" />
+            <Link2 size={16} className="text-primary" />
             Confirm Publication
           </DialogTitle>
           <DialogDescription>
-            Paste the live LinkedIn post URL below. This proves the post went live and creates a
-            permanent link in the audit trail.
+            Paste the live LinkedIn post URL to confirm publication and create a permanent audit trail entry.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div>
-            <Label htmlFor="linkedin-url" className="text-sm font-medium">
-              LinkedIn Post URL
-            </Label>
+            <Label htmlFor="linkedin-url" className="text-xs font-medium">LinkedIn Post URL</Label>
             <Input
               id="linkedin-url"
-              placeholder="https://www.linkedin.com/posts/..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="mt-1.5"
+              placeholder="https://www.linkedin.com/posts/..."
+              className="mt-1.5 text-sm"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              After publishing on LinkedIn, copy the post URL from the "···" menu → "Copy link to post".
+              After publishing, copy the URL from the post's "···" menu → "Copy link to post".
             </p>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => { setUrl(""); onClose(); }}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => { setUrl(""); onClose(); }}>Cancel</Button>
           <Button
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            onClick={handleConfirm}
-            disabled={markPublishedMutation.isPending || !url.trim()}
+            disabled={!url.trim() || markPublished.isPending}
+            onClick={() => markPublished.mutate({ postId: post.post.id, linkedInUrl: url.trim() })}
           >
-            {markPublishedMutation.isPending ? (
-              <Loader2 size={14} className="mr-1.5 animate-spin" />
-            ) : (
-              <CheckSquare size={14} className="mr-1.5" />
-            )}
+            {markPublished.isPending ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : <CheckSquare size={13} className="mr-1.5" />}
             Confirm Published
           </Button>
         </DialogFooter>
@@ -129,22 +159,23 @@ function PublishConfirmModal({
   );
 }
 
-// ─── Image Prompt Dialog ─────────────────────────────────────────────────────
-
+// ─── Image Prompt Dialog ──────────────────────────────────────────────────────
 function ImagePromptDialog({
-  open,
   item,
+  open,
   onClose,
 }: {
-  open: boolean;
   item: QueueItem | null;
+  open: boolean;
   onClose: () => void;
 }) {
   const [imagePrompt, setImagePrompt] = useState("");
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const generateMutation = trpc.queue.generateImagePrompt.useMutation({
-    onSuccess: (data) => setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : ""),
+    onSuccess: (data) => {
+      setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : JSON.stringify(data.imagePrompt));
+    },
     onError: (err) => toast.error(err.message),
   });
 
@@ -154,54 +185,62 @@ function ImagePromptDialog({
     generateMutation.mutate({
       postId: item.post.id,
       postContent: item.post.content,
-      profile: item.job.profile as "aa_company" | "david_personal" | "blog_post",
+      profile: item.job.profile,
     });
   }
 
-  function copyPrompt() {
+  function handleCopy() {
     navigator.clipboard.writeText(imagePrompt);
-    setCopiedPrompt(true);
+    setCopied(true);
     toast.success("Image prompt copied");
-    setTimeout(() => setCopiedPrompt(false), 3000);
+    setTimeout(() => setCopied(false), 2500);
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setImagePrompt(""); onClose(); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) { setImagePrompt(""); onClose(); }
+        else if (item && !imagePrompt && !generateMutation.isPending) handleGenerate();
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Image size={16} className="text-primary" />
+            <ImageIcon size={15} className="text-primary" />
             Generate Image Prompt
           </DialogTitle>
           <DialogDescription>
-            AI-generated prompt based on the post content and your image guidelines. Paste into Midjourney or DALL-E.
+            AI-generated brief based on the post and your image guidelines. Paste into Midjourney or DALL-E.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           {generateMutation.isPending ? (
-            <div className="flex items-center gap-2 py-6 justify-center">
+            <div className="flex items-center justify-center gap-2 py-8">
               <Loader2 size={18} className="animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Generating image prompt…</span>
+              <span className="text-sm text-muted-foreground">Generating brief…</span>
             </div>
           ) : imagePrompt ? (
             <div className="space-y-2">
-              <div className="bg-muted/50 rounded-md p-3 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              <div className="bg-muted/40 rounded-md p-3 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                 {imagePrompt}
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={copyPrompt}>
-                  {copiedPrompt ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedPrompt ? "Copied!" : "Copy Prompt"}
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCopy}>
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? "Copied!" : "Copy"}
                 </Button>
                 <Button size="sm" variant="ghost" className="gap-1.5" onClick={handleGenerate} disabled={generateMutation.isPending}>
-                  <Sparkles size={13} />
+                  <RotateCcw size={12} />
                   Regenerate
                 </Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-6">
-              <p className="text-sm text-muted-foreground text-center">Generate a Midjourney/DALL-E prompt tailored to this post and your brand image guidelines.</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Generate a Midjourney/DALL-E prompt tailored to this post and your brand image guidelines.
+              </p>
               <Button className="gap-1.5" onClick={handleGenerate}>
                 <Sparkles size={13} />
                 Generate
@@ -217,136 +256,76 @@ function ImagePromptDialog({
   );
 }
 
-// ─── Calendar View ────────────────────────────────────────────────────────────
-
-type QueueItem = { post: { id: number; variantLabel: string; content: string; approvedBy: string | null; approvedAt: Date | null; suggestedPublishDate: Date | null; publishedAt: Date | null; publishedBy: string | null; publicationStatus: string | null; linkedInUrl: string | null }; job: { id: number; topic: string; contentPillar: string; profile: string } };
-
-function CalendarView({
-  items,
-  onMarkPublished,
-  onCopy,
-  copiedId,
+// ─── Spotlight Block ──────────────────────────────────────────────────────────
+function SpotlightBlock({
+  profile,
+  item,
+  onPublish,
+  onImagePrompt,
 }: {
-  items: QueueItem[];
-  onMarkPublished: (postId: number) => void;
-  onCopy: (text: string, id: number) => void;
-  copiedId: number | null;
+  profile: Profile;
+  item: QueueItem | null;
+  onPublish: (item: QueueItem) => void;
+  onImagePrompt: (item: QueueItem) => void;
 }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const cfg = profileConfig(profile);
+  const [copied, setCopied] = useState(false);
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  // Pad to start on Monday
-  const startPad = (monthStart.getDay() + 6) % 7; // 0=Mon
-  const paddedDays = [...Array(startPad).fill(null), ...days];
-
-  const getPostsForDay = (day: Date) =>
-    items.filter((i) => {
-      const d = i.post.suggestedPublishDate
-        ? new Date(i.post.suggestedPublishDate)
-        : i.post.approvedAt
-        ? new Date(i.post.approvedAt)
-        : null;
-      return d && isSameDay(d, day);
-    });
-
-  const unscheduled = items.filter((i) => !i.post.suggestedPublishDate);
+  function handleCopy() {
+    if (!item) return;
+    navigator.clipboard.writeText(item.post.content);
+    setCopied(true);
+    toast.success("Post text copied");
+    setTimeout(() => setCopied(false), 2500);
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Month nav */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-          <ChevronLeft size={16} />
-        </Button>
-        <span className="font-semibold text-foreground">{format(currentMonth, "MMMM yyyy")}</span>
-        <Button variant="ghost" size="sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-          <ChevronRight size={16} />
-        </Button>
+    <div className={`rounded-lg border bg-card flex flex-col ${item ? cfg.accentClass : "border-border"}`}>
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+        {cfg.icon}
+        <span className={`text-xs font-semibold ${cfg.headerClass}`}>{cfg.label}</span>
+        {item && profile === "blog_post" && (
+          <span className="ml-auto text-[10px] text-muted-foreground">{wordCount(item.post.content)} words</span>
+        )}
       </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 gap-1">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-          <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">
-            {d}
+      {/* Content */}
+      <div className={`flex-1 p-4 ${profile === "blog_post" ? "overflow-y-auto max-h-72" : ""}`}>
+        {!item ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+            {cfg.emptyIcon}
+            <p className="text-xs text-muted-foreground mt-1">Nothing queued</p>
+            <p className="text-[10px] text-muted-foreground/50">Submit an idea to get started</p>
           </div>
-        ))}
-        {paddedDays.map((day, i) => {
-          if (!day) return <div key={`pad-${i}`} />;
-          const dayPosts = getPostsForDay(day);
-          const isCurrentDay = isToday(day);
-          return (
-            <div
-              key={day.toISOString()}
-              className={`min-h-[72px] rounded-md border p-1.5 text-xs ${
-                isCurrentDay ? "border-primary bg-primary/5" : "border-border bg-background"
-              }`}
-            >
-              <span
-                className={`inline-block w-5 h-5 text-center leading-5 rounded-full text-xs font-medium mb-1 ${
-                  isCurrentDay ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {format(day, "d")}
-              </span>
-              {dayPosts.map(({ post, job }) => (
-                <div
-                  key={post.id}
-                  className={`rounded px-1 py-0.5 mb-0.5 truncate cursor-pointer ${
-                    post.publishedAt
-                      ? "bg-cyan-500/15 text-cyan-400"
-                      : "bg-primary/10 text-primary"
-                  }`}
-                  title={job.topic}
-                  onClick={() => !post.publishedAt && onMarkPublished(post.id)}
-                >
-                  {job.profile === "aa_company" ? "AA" : "DP"}: {job.topic.slice(0, 18)}…
-                </div>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Unscheduled */}
-      {unscheduled.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">
-            No suggested date ({unscheduled.length})
-          </p>
+        ) : (
           <div className="space-y-2">
-            {unscheduled.map(({ post, job }) => (
-              <div
-                key={post.id}
-                className="flex items-center justify-between gap-3 border border-border rounded-md px-3 py-2 bg-background"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{job.topic}</p>
-                  <p className="text-xs text-muted-foreground">{job.contentPillar}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => onCopy(post.content, post.id)}
-                  >
-                    {copiedId === post.id ? <Check size={12} /> : <Copy size={12} />}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 px-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={() => onMarkPublished(post.id)}
-                  >
-                    <CheckSquare size={12} />
-                  </Button>
-                </div>
-              </div>
-            ))}
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{item.job.contentPillar}</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{item.post.content}</p>
+            {item.post.approvedAt && (
+              <p className="text-[10px] text-muted-foreground/50 pt-1">
+                Approved {format(new Date(item.post.approvedAt), "d MMM yyyy")}
+              </p>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      {item && (
+        <div className="px-4 py-3 border-t border-border flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7" onClick={handleCopy}>
+            {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+            {copied ? "Copied!" : "Copy"}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7" onClick={() => onImagePrompt(item)}>
+            <Sparkles size={11} />
+            Image Prompt
+          </Button>
+          <Button size="sm" className="gap-1.5 text-xs h-7 ml-auto" onClick={() => onPublish(item)}>
+            <CheckCircle2 size={11} />
+            Mark Published
+          </Button>
         </div>
       )}
     </div>
@@ -354,256 +333,140 @@ function CalendarView({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
 export default function QueuePage() {
-  const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [publishModalPostId, setPublishModalPostId] = useState<number | null>(null);
-  const [imagePromptItem, setImagePromptItem] = useState<QueueItem | null>(null);
+  const { data: queueData, isLoading } = trpc.queue.list.useQuery();
+  const [publishTarget, setPublishTarget] = useState<QueueItem | null>(null);
+  const [imagePromptTarget, setImagePromptTarget] = useState<QueueItem | null>(null);
+  const [imagePromptOpen, setImagePromptOpen] = useState(false);
 
-  const queueQuery = trpc.queue.list.useQuery(undefined, { refetchInterval: 30000 });
+  const items: QueueItem[] = (queueData ?? []) as QueueItem[];
 
-  const copyToClipboard = async (text: string, postId: number) => {
-    await navigator.clipboard.writeText(text);
-    setCopiedId(postId);
-    toast.success("Post copied to clipboard — paste it into LinkedIn.");
-    setTimeout(() => setCopiedId(null), 3000);
-  };
+  // Get the oldest approved post per profile (last in desc-sorted list = oldest)
+  function nextForProfile(profile: Profile): QueueItem | null {
+    const filtered = items.filter((i) => i.job.profile === profile);
+    if (filtered.length === 0) return null;
+    return filtered[filtered.length - 1];
+  }
 
-  const items = (queueQuery.data ?? []) as QueueItem[];
-  const pending = items.filter((i) => !i.post.publishedAt);
-  const published = items.filter((i) => i.post.publishedAt);
-
-  // Overdue = approved but not published after 7 days
-  const isOverdue = (approvedAt: Date | null) => {
-    if (!approvedAt) return false;
-    return differenceInDays(new Date(), new Date(approvedAt)) >= 7;
-  };
+  const aaNext = nextForProfile("aa_company");
+  const davidNext = nextForProfile("david_personal");
+  const blogNext = nextForProfile("blog_post");
 
   return (
-    <AppLayout title="Ready to Post Queue">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Instructions banner */}
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm text-foreground font-medium mb-1">How to publish</p>
-          <p className="text-sm text-muted-foreground">
-            Copy the post text, open LinkedIn, paste and publish manually. Then return here, click{" "}
-            <strong>Mark as Published</strong>, and paste the live LinkedIn post URL to confirm.
-            This system <strong>never</strong> publishes to LinkedIn automatically.
-          </p>
+    <AppLayout title="Ready to Post">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <CheckSquare size={18} className="text-primary" />
+              Ready to Post
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Approved posts awaiting manual publication.
+            </p>
+          </div>
+          {items.length > 0 && (
+            <div className="text-right">
+              <p className="text-2xl font-bold text-primary">{items.length}</p>
+              <p className="text-xs text-muted-foreground">in queue</p>
+            </div>
+          )}
         </div>
 
-        {queueQuery.isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin text-muted-foreground" size={24} />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 size={24} className="animate-spin text-primary" />
           </div>
-        ) : pending.length === 0 && published.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-12 text-center">
-              <CheckSquare size={32} className="text-muted-foreground mx-auto mb-3" />
-              <p className="font-medium text-foreground mb-1">Queue is empty</p>
-              <p className="text-sm text-muted-foreground">
-                Approved posts will appear here once an approver signs off on a draft.
-              </p>
-            </CardContent>
-          </Card>
         ) : (
-          <Tabs defaultValue="list">
-            <TabsList className="mb-4">
-              <TabsTrigger value="list" className="gap-1.5">
-                <List size={14} />
-                List
-                {pending.length > 0 && (
-                  <Badge className="bg-amber-500/15 text-amber-400 text-xs ml-1">{pending.length}</Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-1.5">
-                <Calendar size={14} />
-                Calendar
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ── LIST TAB ── */}
-            <TabsContent value="list" className="space-y-6">
-              {pending.length > 0 && (
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground mb-3">
-                    Awaiting Manual Publish
-                  </h2>
-                  <div className="space-y-4">
-                    {pending.map(({ post, job }) => {
-                      const overdue = isOverdue(post.approvedAt);
-                      return (
-                        <Card
-                          key={post.id}
-                          className={`${overdue ? "border-amber-500/30 bg-amber-500/8" : "border-primary/25 bg-primary/5"}`}
-                        >
-                          <CardHeader className="pb-2 pt-3 px-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <Badge className="bg-cyan-500/15 text-cyan-400 text-xs">Approved</Badge>
-                                  {overdue && (
-                                    <Badge className="bg-amber-500/15 text-amber-400 text-xs flex items-center gap-1">
-                                      <AlertTriangle size={10} />
-                                      Overdue
-                                    </Badge>
-                                  )}
-                                  <Badge variant="outline" className="text-xs border-border text-muted-foreground">
-                                    {job.profile === "aa_company" ? "AA Company" : "David Personal"}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">Variant {post.variantLabel}</span>
-                                </div>
-                                <p className="text-sm font-medium text-foreground line-clamp-1">{job.topic}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {job.contentPillar}
-                                  {post.approvedBy && ` · Approved by ${post.approvedBy}`}
-                                  {post.approvedAt &&
-                                    ` ${formatDistanceToNow(new Date(post.approvedAt), { addSuffix: true })}`}
-                                </p>
-                                {post.suggestedPublishDate && (
-                                  <p className="text-xs text-primary mt-0.5">
-                                    Suggested publish:{" "}
-                                    {format(new Date(post.suggestedPublishDate), "d MMM yyyy")}
-                                  </p>
-                                )}
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-3 flex-shrink-0"
-                                onClick={() => copyToClipboard(post.content, post.id)}
-                              >
-                                {copiedId === post.id ? (
-                                  <><Check size={13} className="mr-1.5 text-primary" />Copied</>
-                                ) : (
-                                  <><Copy size={13} className="mr-1.5" />Copy</>
-                                )}
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="px-4 pb-4">
-                            <div className="bg-white border border-border rounded-md p-3 mb-3">
-                              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                                {post.content}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1.5 text-muted-foreground"
-                                onClick={() => setImagePromptItem({ post, job })}
-                              >
-                                <Image size={13} />
-                                Image Prompt
-                              </Button>
-                              <Button
-                                asChild
-                                variant="outline"
-                                size="sm"
-                                className="text-primary border-primary/30 hover:bg-primary/8"
-                              >
-                                <a
-                                  href={
-                                    job.profile === "aa_company"
-                                      ? "https://www.linkedin.com/company/absolute-aromas/"
-                                      : "https://www.linkedin.com/in/david-tomlinson-absolute-aromas/"
-                                  }
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink size={13} className="mr-1.5" />
-                                  Open LinkedIn
-                                </a>
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                                onClick={() => setPublishModalPostId(post.id)}
-                              >
-                                <CheckSquare size={13} className="mr-1.5" />
-                                Mark as Published
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Published */}
-              {published.length > 0 && (
-                <div>
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-                    Confirmed Published ({published.length})
-                  </h2>
-                  <div className="space-y-2">
-                    {published.slice(0, 20).map(({ post, job }) => (
-                      <Card key={post.id} className="border-border opacity-80">
-                        <CardContent className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <Badge className="bg-cyan-500/15 text-cyan-400 text-xs">Published</Badge>
-                                <span className={`text-xs font-medium ${
-                                  job.profile === "aa_company" ? "text-cyan-400" :
-                                  job.profile === "david_personal" ? "text-amber-400" :
-                                  "text-violet-400"
-                                }`}>
-                                  {job.profile === "aa_company" ? "LinkedIn · AA" : job.profile === "david_personal" ? "LinkedIn · David" : "Blog Post"}
-                                </span>
-                              </div>
-                              <p className="text-sm text-foreground truncate">{job.topic}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Published by {post.publishedBy}
-                                {post.publishedAt &&
-                                  ` · ${format(new Date(post.publishedAt), "d MMM yyyy")}`}
-                              </p>
-                            </div>
-                            {post.linkedInUrl && (
-                              <Button asChild variant="ghost" size="sm" className="text-primary h-7 px-2">
-                                <a href={post.linkedInUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink size={13} className="mr-1" />
-                                  View Post
-                                </a>
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-
-            {/* ── CALENDAR TAB ── */}
-            <TabsContent value="calendar">
-              <CalendarView
-                items={pending}
-                onMarkPublished={(id) => setPublishModalPostId(id)}
-                onCopy={copyToClipboard}
-                copiedId={copiedId}
+          <>
+            {/* Three content-type spotlight blocks */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <SpotlightBlock
+                profile="aa_company"
+                item={aaNext}
+                onPublish={setPublishTarget}
+                onImagePrompt={(item) => { setImagePromptTarget(item); setImagePromptOpen(true); }}
               />
-            </TabsContent>
-          </Tabs>
+              <SpotlightBlock
+                profile="david_personal"
+                item={davidNext}
+                onPublish={setPublishTarget}
+                onImagePrompt={(item) => { setImagePromptTarget(item); setImagePromptOpen(true); }}
+              />
+              <SpotlightBlock
+                profile="blog_post"
+                item={blogNext}
+                onPublish={setPublishTarget}
+                onImagePrompt={(item) => { setImagePromptTarget(item); setImagePromptOpen(true); }}
+              />
+            </div>
+
+            {/* Full approved posts list */}
+            {items.length > 0 ? (
+              <div>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  All Approved Posts ({items.length})
+                </h2>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  {items.map((item, idx) => {
+                    const cfg = profileConfig(item.job.profile);
+                    return (
+                      <div
+                        key={item.post.id}
+                        className={`flex items-center gap-3 px-4 py-3 ${
+                          idx < items.length - 1 ? "border-b border-border" : ""
+                        } hover:bg-muted/20 transition-colors`}
+                      >
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0 ${cfg.badgeClass}`}>
+                          {cfg.icon}
+                          {cfg.shortLabel}
+                        </span>
+                        <p className="text-sm text-foreground flex-1 min-w-0 truncate">
+                          {item.post.content.slice(0, 80)}{item.post.content.length > 80 ? "…" : ""}
+                        </p>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {item.post.approvedAt
+                            ? format(new Date(item.post.approvedAt), "d MMM yyyy")
+                            : "—"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-xs shrink-0 h-7"
+                          onClick={() => setPublishTarget(item)}
+                        >
+                          <ExternalLink size={10} />
+                          Copy & Mark Published
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-12 text-center">
+                <CheckCircle2 size={32} className="text-primary/30 mx-auto mb-3" />
+                <p className="text-foreground font-semibold mb-1">Queue is empty</p>
+                <p className="text-sm text-muted-foreground">
+                  No approved posts waiting to be published. Submit ideas in Saved Ideas to get started.
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Publication confirmation modal */}
-      <PublishConfirmModal
-        open={publishModalPostId !== null}
-        postId={publishModalPostId}
-        onClose={() => setPublishModalPostId(null)}
+      {/* Dialogs */}
+      <PublishDialog
+        post={publishTarget}
+        open={!!publishTarget}
+        onClose={() => setPublishTarget(null)}
       />
-
-      {/* Image prompt dialog */}
       <ImagePromptDialog
-        open={imagePromptItem !== null}
-        item={imagePromptItem}
-        onClose={() => setImagePromptItem(null)}
+        item={imagePromptTarget}
+        open={imagePromptOpen}
+        onClose={() => { setImagePromptOpen(false); setImagePromptTarget(null); }}
       />
     </AppLayout>
   );

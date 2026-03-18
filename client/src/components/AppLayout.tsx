@@ -33,10 +33,9 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={15} />, matchPrefix: "/dashboard" },
   { label: "Idea Generator", href: "/ideas", icon: <Sparkles size={15} /> },
   { label: "Saved Ideas", href: "/saved-ideas", icon: <Bookmark size={15} /> },
-  { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={15} />, adminOnly: true },
-  { label: "Guardrail Review", href: "/guardrails", icon: <AlertTriangle size={15} />, adminOnly: true },
-  { label: "Post History", href: "/history", icon: <History size={15} />, adminOnly: true },
   { label: "Approval Queue", href: "/approval-queue", icon: <ClipboardList size={15} />, adminOnly: true },
+  { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={15} />, adminOnly: true },
+  { label: "Post History", href: "/history", icon: <History size={15} />, adminOnly: true },
   { label: "Admin", href: "/admin", icon: <Settings size={15} />, adminOnly: true },
 ];
 
@@ -60,9 +59,8 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
     enabled: isAuthenticated && user?.role === "admin",
     refetchInterval: 30000,
   });
-  const pendingApprovalCount = (pendingApprovalQuery.data ?? []).filter(
-    (j) => j.status === "pending_approval"
-  ).length;
+  // Badge shows ALL items needing attention: awaiting approval + guardrail review
+  const pendingApprovalCount = (pendingApprovalQuery.data ?? []).length;
 
   if (loading) {
     return (
@@ -165,11 +163,6 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             >
               <span className={active ? "text-primary" : "text-muted-foreground"}>{item.icon}</span>
               <span>{item.label}</span>
-              {item.href === "/guardrails" && pendingGuardrailCount > 0 && (
-                <Badge className="ml-auto bg-red-500/80 text-white text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center">
-                  {pendingGuardrailCount}
-                </Badge>
-              )}
               {item.href === "/approval-queue" && pendingApprovalCount > 0 && (
                 <Badge className="ml-auto bg-amber-500/80 text-white text-[10px] px-1.5 py-0 h-4 min-w-[16px] flex items-center justify-center">
                   {pendingApprovalCount}

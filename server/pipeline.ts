@@ -190,7 +190,12 @@ export async function runGenerationPipeline(options: PipelineRunOptions): Promis
   }
 
   const token = nanoid(48);
-  await createApprovalToken(jobId, job.requiredApprover, token);
+  await createApprovalToken({
+    token,
+    jobId,
+    approverRole: job.requiredApprover,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
 
   const { getActivePostsByJobId: getActivePosts } = await import("./db");
   const activePosts = await getActivePosts(jobId);

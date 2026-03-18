@@ -163,11 +163,7 @@ function JobCard({ job, approverNames }: { job: JobCardProps; approverNames?: { 
               <span className="text-xs text-slate-600">·</span>
               <span className="text-xs text-slate-500">{job.contentPillar}</span>
               <span className="text-xs text-slate-600">·</span>
-              <span className="text-xs text-slate-500">
-                Approver: {job.requiredApprover === "david"
-                  ? (approverNames?.david ?? "David")
-                  : (approverNames?.danny ?? "Danny")}
-              </span>
+              <span className="text-xs text-slate-500">Reviewer</span>
             </div>
             <p className="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">
               {job.topic}

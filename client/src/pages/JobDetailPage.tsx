@@ -108,11 +108,7 @@ export default function JobDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Required Approver</p>
-                <p className="font-medium">
-                  {job.requiredApprover === "david"
-                    ? (approverNames?.david ?? "David")
-                    : (approverNames?.danny ?? "Danny")}
-                </p>
+                <p className="font-medium">Reviewer</p>
               </div>
               {job.targetAudience && (
                 <div>
@@ -244,7 +240,7 @@ export default function JobDetailPage() {
               <Loader2 size={24} className="text-muted-foreground mx-auto mb-2 animate-spin" />
               <p className="text-sm text-muted-foreground">
                 {job.status === "generating" ? "Generating post variants..." :
-                 job.status === "pending_style_guide" ? "Fetching style guide from Notion..." :
+                 job.status === "pending_style_guide" ? "Style guide not configured — go to Admin → Settings." :
                  "Processing..."}
               </p>
             </CardContent>

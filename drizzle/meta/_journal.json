@@ -43,6 +43,13 @@
       "when": 1773792457557,
       "tag": "0005_bumpy_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773798193040,
+      "tag": "0006_silky_nebula",
+      "breakpoints": true
     }
   ]
 }

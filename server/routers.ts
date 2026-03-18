@@ -859,6 +859,202 @@ Return a JSON array of 10 ideas.`;
       const { listSavedIdeas } = await import("./db");
       return listSavedIdeas(ctx.user.id);
     }),
+
+    /**
+     * Generate a single draft for a saved idea.
+     * Creates a Job in "drafting" status, runs Claude for one variant.
+     * On redraft: supersedes previous draft and regenerates.
+     */
+    generateDraft: protectedProcedure
+      .input(
+        z.object({
+          ideaId: z.number().int(),
+          profile: z.enum(["aa_company", "david_personal", "blog_post"]),
+          contentPillar: z.string().min(1),
+          toneHint: z.string().optional(),
+          targetAudience: z.string().optional(),
+          redraftFeedback: z.string().optional(),
+          existingJobId: z.number().int().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { getDb, getStyleGuideForProfile, createJob, updateIdeaStatus, supersedePreviousIterations, getActivePostsByJobId, createPost } = await import("./db");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { ideas: ideasTable, jobs: jobsTable, posts: postsTable } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+
+        const ideaRows = await db.select().from(ideasTable).where(eq(ideasTable.id, input.ideaId)).limit(1);
+        const idea = ideaRows[0];
+        if (!idea) throw new TRPCError({ code: "NOT_FOUND", message: "Idea not found" });
+
+        const styleGuide = await getStyleGuideForProfile(input.profile);
+        if (!styleGuide || !styleGuide.content?.trim()) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Style guide not configured — go to Admin → Settings to set it up.",
+          });
+        }
+
+        const requiredApprover: "danny" | "david" = input.profile === "david_personal" ? "david" : "danny";
+        let jobId: number;
+
+        if (input.existingJobId) {
+          jobId = input.existingJobId;
+          const existing = await getActivePostsByJobId(jobId);
+          const maxIter = existing.reduce((m, p) => Math.max(m, p.iteration), 0);
+          await supersedePreviousIterations(jobId, maxIter + 1);
+          await db.update(jobsTable).set({ status: "generating", toneHint: input.toneHint ?? null }).where(eq(jobsTable.id, jobId));
+        } else {
+          const result = await createJob({
+            submittedById: ctx.user.id,
+            profile: input.profile,
+            contentPillar: input.contentPillar,
+            topic: idea.title + ": " + idea.description,
+            toneHint: input.toneHint ?? null,
+            targetAudience: input.targetAudience ?? null,
+            requiredApprover,
+            namedClientFlag: false,
+            namedClientConfirmed: false,
+          });
+          jobId = (result as { insertId?: number })?.insertId ?? 0;
+          await updateIdeaStatus(input.ideaId, "queued", jobId);
+          await db.update(jobsTable).set({ status: "generating" }).where(eq(jobsTable.id, jobId));
+        }
+
+        const { generatePostVariants } = await import("./generation");
+        let variants;
+        try {
+          variants = await generatePostVariants({
+            profile: input.profile,
+            topic: idea.title + ": " + idea.description,
+            contentPillar: input.contentPillar,
+            toneHint: input.toneHint,
+            targetAudience: input.targetAudience,
+            namedClientFlag: false,
+            styleGuideText: styleGuide.content,
+            editFeedback: input.redraftFeedback,
+            variantCount: 1,
+          });
+        } catch {
+          await db.update(jobsTable).set({ status: "pending_style_guide" }).where(eq(jobsTable.id, jobId));
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Draft generation failed. Please try again." });
+        }
+
+        const variant = variants[0];
+        if (!variant) {
+          await db.update(jobsTable).set({ status: "pending_style_guide" }).where(eq(jobsTable.id, jobId));
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No draft was generated. Please try again." });
+        }
+
+        const existingPosts = await db.select().from(postsTable).where(eq(postsTable.jobId, jobId));
+        const iteration = existingPosts.length > 0 ? Math.max(...existingPosts.map((p) => p.iteration)) + 1 : 1;
+
+        const postResult = await createPost({
+          jobId,
+          variantLabel: "A",
+          content: variant.content,
+          iteration,
+          status: "draft",
+        });
+        const postId = (postResult as { insertId?: number })?.insertId ?? 0;
+
+        await db.update(jobsTable).set({ status: "drafting" }).where(eq(jobsTable.id, jobId));
+
+        await addAuditEntry({
+          jobId,
+          postId,
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: input.redraftFeedback ? "redraft_generated" : "draft_generated",
+          details: { ideaId: input.ideaId, iteration },
+        });
+
+        return { success: true, jobId, postId, content: variant.content };
+      }),
+
+    /**
+     * Submit a draft for approval.
+     * Runs guardrails, then routes to pending_guardrail or pending_approval.
+     */
+    submitForApproval: protectedProcedure
+      .input(
+        z.object({
+          jobId: z.number().int(),
+          postId: z.number().int(),
+          appBaseUrl: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const job = await getJobById(input.jobId);
+        if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
+        const post = await getPostById(input.postId);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Draft post not found" });
+        if (post.status !== "draft") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Post is not in draft status" });
+        }
+
+        const { runGuardrails } = await import("./guardrails");
+        const guardrailResult = runGuardrails(post.content, { namedClientFlag: job.namedClientFlag });
+        const blockingFlags = guardrailResult.flags.filter((f) => f.severity === "block");
+
+        const { posts: postsTable, jobs: jobsTable } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+
+        if (blockingFlags.length > 0) {
+          await db.update(postsTable).set({ status: "flagged", guardrailFlags: guardrailResult.flags }).where(eq(postsTable.id, input.postId));
+          await db.update(jobsTable).set({ status: "pending_guardrail" }).where(eq(jobsTable.id, input.jobId));
+          const { createGuardrailReviews } = await import("./db");
+          await createGuardrailReviews(input.postId, blockingFlags);
+          await addAuditEntry({
+            jobId: input.jobId,
+            postId: input.postId,
+            actor: ctx.user.name ?? ctx.user.openId,
+            action: "guardrail_flagged",
+            details: { flagCount: blockingFlags.length, flags: blockingFlags.map((f) => f.type) },
+          });
+          return { success: true, status: "pending_guardrail" as const, message: `${blockingFlags.length} guardrail flag(s) detected. Post is in Approval Queue for review.` };
+        }
+
+        const approverCfg = await getApproverConfig(job.requiredApprover);
+        if (!approverCfg) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Approver config not found" });
+
+        const appBaseUrl = input.appBaseUrl ?? getAppBaseUrl(ctx.req);
+        const crypto = await import("crypto");
+        const token = crypto.randomBytes(32).toString("hex");
+        await createApprovalToken({
+          token,
+          jobId: input.jobId,
+          approverRole: job.requiredApprover,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
+
+        await db.update(postsTable).set({ status: "pending_approval" }).where(eq(postsTable.id, input.postId));
+        await db.update(jobsTable).set({ status: "pending_approval" }).where(eq(jobsTable.id, input.jobId));
+
+        const { sendApprovalEmail } = await import("./email");
+        await sendApprovalEmail({
+          job: { ...job, status: "pending_approval" },
+          posts: [{ ...post, status: "pending_approval" as const }],
+          approverName: approverCfg.name,
+          approverEmail: approverCfg.email,
+          approverRole: job.requiredApprover,
+          approvalToken: token,
+          appBaseUrl,
+        });
+
+        await addAuditEntry({
+          jobId: input.jobId,
+          postId: input.postId,
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "submitted_for_approval",
+          details: { approver: job.requiredApprover, approverEmail: approverCfg.email },
+        });
+
+        return { success: true, status: "pending_approval" as const, message: `Draft submitted to ${approverCfg.name} for approval.` };
+      }),
   }),
 
   // ─── Admin ─────────────────────────────────────────────────────────────

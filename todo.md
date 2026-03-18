@@ -194,3 +194,40 @@
 - [x] Update guardrails.ts to import from guardrailPatterns.ts
 - [x] Enforce hard fail on empty style guide in pipeline.ts (throws with clear message)
 - [x] notion.ts now only used for audit log sync (fetchStyleGuide still present but unused)
+
+## Session 5 — Flow Fix, Nav Restructure, Ready to Post Redesign
+
+### Schema
+- [x] Add "drafting" to jobs.status enum (migration)
+
+### Bug Fix — Idea Generator checkbox state
+- [x] Fix IdeaGenerator: derive checkbox state from savedAt (DB) not useState — prevents wipe on tab switch
+
+### Backend — New Draft Flow
+- [x] Add ideas.generateDraft tRPC procedure: creates job in "drafting" status, runs Claude, returns single draft post
+- [x] Add ideas.submitForApproval tRPC procedure: runs guardrails on draft, routes to approver, moves to pending_approval or pending_guardrail
+- [x] Guardrail check runs post-submission (in submitForApproval), not pre-draft
+
+### Saved Ideas Page — Rebuild
+- [x] Left panel: list of saved ideas, click to select
+- [x] Right panel: empty state → "Draft" button → single draft shown → Redraft (with feedback) / Submit for Approval
+- [x] Redraft: text input + regenerate
+- [x] Submit for Approval: runs guardrails, creates approval token, sends email
+
+### Navigation Restructure
+- [x] Reorder sidebar: Dashboard, Idea Generator, Saved Ideas, Approval Queue, Ready to Post, Post History, Admin
+- [x] Remove Guardrail Review from sidebar nav entirely
+- [x] Approval Queue badge shows pending_approval + pending_guardrail count
+
+### Ready to Post — Redesign
+- [x] Top section: 3 content-type spotlight blocks (AA Company / David Personal / Blog Post)
+- [x] Each block: full readable text, not truncated; blog block has vertical scroller
+- [x] Empty state per block: "Nothing queued — submit an idea to get started"
+- [x] Bottom section: all approved posts list, most recent first
+- [x] Each row: content type badge, first 80 chars, date approved, "Copy & Mark Published" button
+
+### Remove Hardcoded Role Names
+- [x] ApprovalQueuePage: "Approver: David/Danny" → "Reviewer"
+- [x] JobDetailPage: "Required Approver" name field → "Reviewer"
+- [x] Home.tsx: remove hardcoded Danny/David from feature description, fix stale Notion reference
+- [x] QueuePage: new design has no hardcoded LinkedIn URLs
