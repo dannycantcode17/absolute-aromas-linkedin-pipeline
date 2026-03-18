@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   approvalTokens,
@@ -8,6 +8,7 @@ import {
   guardrailReviews,
   ideaBatches,
   ideas,
+  imageGuidelines,
   InsertUser,
   jobs,
   postingRhythm,
@@ -569,6 +570,66 @@ export async function upsertPostingRhythm(profile: "aa_company" | "david_persona
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.insert(postingRhythm).values({ profile, targetPerWeek }).onDuplicateKeyUpdate({ set: { targetPerWeek } });
+}
+
+// ─── Image Guidelines (v6) ────────────────────────────────────────────────────
+
+export async function getImageGuidelineForProfile(profile: "aa_company" | "david_personal" | "blog_post") {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(imageGuidelines).where(eq(imageGuidelines.profile, profile)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function getAllImageGuidelines() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(imageGuidelines).orderBy(imageGuidelines.profile);
+}
+
+export async function upsertImageGuideline(profile: "aa_company" | "david_personal" | "blog_post", content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(imageGuidelines).values({ profile, content }).onDuplicateKeyUpdate({ set: { content } });
+}
+
+// ─── Saved Ideas (v6) ─────────────────────────────────────────────────────────
+
+/** Mark an idea as saved (set savedAt timestamp) */
+export async function saveIdea(ideaId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(ideas).set({ savedAt: new Date() }).where(eq(ideas.id, ideaId));
+}
+
+/** List all saved (pending) ideas for a user — sorted by savedAt desc */
+export async function listSavedIdeas(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: ideas.id,
+      batchId: ideas.batchId,
+      title: ideas.title,
+      description: ideas.description,
+      suggestedPillar: ideas.suggestedPillar,
+      suggestedProfile: ideas.suggestedProfile,
+      rationale: ideas.rationale,
+      status: ideas.status,
+      jobId: ideas.jobId,
+      savedAt: ideas.savedAt,
+      createdAt: ideas.createdAt,
+    })
+    .from(ideas)
+    .innerJoin(ideaBatches, eq(ideas.batchId, ideaBatches.id))
+    .where(
+      and(
+        eq(ideaBatches.submittedById, userId),
+        isNotNull(ideas.savedAt),
+        eq(ideas.status, "pending")
+      )
+    )
+    .orderBy(desc(ideas.savedAt));
 }
 
 // ─── Jobs with live approver names (fixes stale name bug) ────────────────────

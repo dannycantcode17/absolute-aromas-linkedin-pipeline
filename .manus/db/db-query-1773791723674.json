@@ -1,0 +1,9 @@
+{
+  "query": "SELECT profile, LENGTH(content) as content_length, updatedAt FROM style_guides; SELECT id, LEFT(competitorNames, 80) as competitors, LEFT(bannedPhrases, 80) as banned, LEFT(flaggedClaimTypes, 80) as claims FROM guardrail_config; SELECT * FROM posting_rhythm;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute SELECT profile, LENGTH(content) as content_length, updatedAt FROM style_guides; SELECT id, LEFT(competitorNames, 80) as competitors, LEFT(bannedPhrases, 80) as banned, LEFT(flaggedClaimTypes, 80) as claims FROM guardrail_config; SELECT * FROM posting_rhythm;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 63
+}

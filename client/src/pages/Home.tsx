@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Leaf, Sparkles, ShieldCheck, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 
 const features = [
@@ -37,17 +38,19 @@ export default function Home() {
   const { loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
 
-  if (loading) {
+  // Redirect authenticated users — must be in useEffect, not render body
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  if (loading || isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="text-primary animate-spin" size={26} />
       </div>
     );
-  }
-
-  if (isAuthenticated) {
-    navigate("/dashboard");
-    return null;
   }
 
   return (

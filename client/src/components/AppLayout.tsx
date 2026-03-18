@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
-  PenLine,
   CheckSquare,
   History,
   Settings,
@@ -16,6 +15,8 @@ import {
   AlertTriangle,
   Sparkles,
   Loader2,
+  Bookmark,
+  ClipboardList,
 } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -31,11 +32,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={15} />, matchPrefix: "/dashboard" },
   { label: "Idea Generator", href: "/ideas", icon: <Sparkles size={15} /> },
-  { label: "Submit Post", href: "/submit", icon: <PenLine size={15} /> },
-  { label: "Approval Queue", href: "/approval-queue", icon: <CheckSquare size={15} />, adminOnly: true },
+  { label: "Saved Ideas", href: "/saved-ideas", icon: <Bookmark size={15} /> },
   { label: "Ready to Post", href: "/queue", icon: <CheckSquare size={15} />, adminOnly: true },
   { label: "Guardrail Review", href: "/guardrails", icon: <AlertTriangle size={15} />, adminOnly: true },
   { label: "Post History", href: "/history", icon: <History size={15} />, adminOnly: true },
+  { label: "Approval Queue", href: "/approval-queue", icon: <ClipboardList size={15} />, adminOnly: true },
   { label: "Admin", href: "/admin", icon: <Settings size={15} />, adminOnly: true },
 ];
 

@@ -55,14 +55,21 @@ export async function runGenerationPipeline(options: PipelineRunOptions): Promis
   const styleGuideText = styleGuideRow?.content ?? "";
 
   if (!styleGuideText) {
-    // No style guide configured yet — still proceed but log the gap
+    // Hard fail: style guide must be configured before generation can proceed
     await addAuditEntry({
       jobId,
       actor: "system",
       action: "style_guide_fetch_failed",
       details: { error: `No style guide configured for profile: ${job.profile}` },
     });
-    // We don't block generation — the system prompts carry the brand voice
+    await updateJobStatus(jobId, "pending_style_guide");
+    const profileLabel =
+      job.profile === "aa_company" ? "AA Company Page" :
+      job.profile === "david_personal" ? "David Personal Page" :
+      "Blog Post";
+    throw new Error(
+      `Style guide not configured — go to Admin → Settings to set it up for the ${profileLabel} profile.`
+    );
   } else {
     await addAuditEntry({
       jobId,

@@ -284,9 +284,10 @@ export const ideas = mysqlTable("ideas", {
   status: mysqlEnum("status", ["pending", "queued", "rejected"]).default("pending").notNull(),
   /** FK → jobs.id if queued */
   jobId: int("jobId"),
+  /** Set when the user explicitly ticks/saves the idea from the generator */
+  savedAt: timestamp("savedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-
 export type Idea = typeof ideas.$inferSelect;
 export type InsertIdea = typeof ideas.$inferInsert;
 
@@ -332,3 +333,15 @@ export const postingRhythm = mysqlTable("posting_rhythm", {
 });
 
 export type PostingRhythm = typeof postingRhythm.$inferSelect;
+
+// ─── Image Guidelines ─────────────────────────────────────────────────────────
+// Admin-editable image style guidelines per profile.
+// Injected into the Generate Image Prompt feature.
+export const imageGuidelines = mysqlTable("image_guidelines", {
+  id: int("id").autoincrement().primaryKey(),
+  profile: mysqlEnum("profile", ["aa_company", "david_personal", "blog_post"]).notNull().unique(),
+  content: text("content").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ImageGuideline = typeof imageGuidelines.$inferSelect;
+export type InsertImageGuideline = typeof imageGuidelines.$inferInsert;

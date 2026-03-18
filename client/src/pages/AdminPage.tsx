@@ -12,13 +12,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Settings, Users, Shield, BookOpen, BarChart3, Save,
-  RefreshCw, CheckCircle, AlertTriangle, Loader2,
+  RefreshCw, CheckCircle, AlertTriangle, Loader2, Image,
 } from "lucide-react";
 
-type TabId = "style-guides" | "guardrails" | "approvers" | "rhythm" | "users";
+type TabId = "style-guides" | "image-guidelines" | "guardrails" | "approvers" | "rhythm" | "users";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "style-guides", label: "Style Guides", icon: <BookOpen className="w-4 h-4" /> },
+  { id: "image-guidelines", label: "Image Guidelines", icon: <Image className="w-4 h-4" /> },
   { id: "guardrails", label: "Guardrails", icon: <Shield className="w-4 h-4" /> },
   { id: "approvers", label: "Approvers", icon: <CheckCircle className="w-4 h-4" /> },
   { id: "rhythm", label: "Posting Rhythm", icon: <BarChart3 className="w-4 h-4" /> },
@@ -83,7 +84,69 @@ function StyleGuidesTab() {
   );
 }
 
-// ─── Guardrails Config Tab ────────────────────────────────────────────────────
+// ─── Image Guidelines Tab ────────────────────────────────────────────────────
+function ImageGuidelinesTab() {
+  const { data: guidelines, refetch } = trpc.settings.listImageGuidelines.useQuery();
+  const upsert = trpc.settings.upsertImageGuideline.useMutation({
+    onSuccess: () => { toast.success("Image guidelines saved"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const profiles: { key: "aa_company" | "david_personal" | "blog_post"; label: string; desc: string }[] = [
+    { key: "aa_company", label: "AA Company Page", desc: "Visual style and photography guidelines for AA Company posts" },
+    { key: "david_personal", label: "David Personal Page", desc: "Image style for David's personal LinkedIn posts" },
+    { key: "blog_post", label: "Blog Posts", desc: "Featured image guidelines for blog content" },
+  ];
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (guidelines) {
+      const init: Record<string, string> = {};
+      for (const g of guidelines) init[g.profile] = g.content;
+      setDrafts(init);
+    }
+  }, [guidelines]);
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Image Guidelines</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          These guidelines are used when generating image prompts for posts. Describe your visual style, photography preferences, and brand aesthetics.
+        </p>
+      </div>
+      {profiles.map((p) => (
+        <Card key={p.key} className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-foreground">{p.label}</CardTitle>
+            <CardDescription>{p.desc}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              className="min-h-[180px] font-mono text-sm bg-background border-border text-foreground"
+              placeholder={`Describe image style for ${p.label}\nE.g.:\n- Clean white backgrounds with botanical elements\n- Warm, natural lighting\n- No text overlays\n- Aspect ratio 1:1 for LinkedIn`}
+              value={drafts[p.key] ?? ""}
+              onChange={(e) => setDrafts((d) => ({ ...d, [p.key]: e.target.value }))}
+            />
+            {guidelines?.find((g) => g.profile === p.key)?.updatedAt && (
+              <p className="text-xs text-muted-foreground">
+                Last updated: {new Date(guidelines.find((g) => g.profile === p.key)!.updatedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+            )}
+            <Button
+              size="sm"
+              onClick={() => upsert.mutate({ profile: p.key, content: drafts[p.key] ?? "" })}
+              disabled={upsert.isPending}
+              className="bg-cyan-500 hover:bg-cyan-400 text-black"
+            >
+              <Save className="w-3.5 h-3.5 mr-1.5" />
+              Save {p.label} Guidelines
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ─── Guardrails Config Tab ─────────────────────────────────────────────────────────────
 function GuardrailsTab() {
   const { data: config, refetch } = trpc.settings.getGuardrailConfig.useQuery();
   const update = trpc.settings.updateGuardrailConfig.useMutation({
@@ -387,6 +450,7 @@ export default function AdminPage() {
         </div>
 
         {activeTab === "style-guides" && <StyleGuidesTab />}
+        {activeTab === "image-guidelines" && <ImageGuidelinesTab />}
         {activeTab === "guardrails" && <GuardrailsTab />}
         {activeTab === "approvers" && <ApproversTab />}
         {activeTab === "rhythm" && <PostingRhythmTab />}

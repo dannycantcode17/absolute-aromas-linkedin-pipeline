@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `image_guidelines` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`profile` enum('aa_company','david_personal','blog_post') NOT NULL,\n\t`content` text NOT NULL,\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `image_guidelines_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `image_guidelines_profile_unique` UNIQUE(`profile`)\n);\nALTER TABLE `ideas` ADD `savedAt` timestamp;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute CREATE TABLE `image_guidelines` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`profile` enum('aa_company','david_personal','blog_post') NOT NULL,\n\t`content` text NOT NULL,\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `image_guidelines_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `image_guidelines_profile_unique` UNIQUE(`profile`)\n);\nALTER TABLE `ideas` ADD `savedAt` timestamp;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 795
+}

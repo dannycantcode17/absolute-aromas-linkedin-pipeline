@@ -39,6 +39,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Link2,
+  Image,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -121,6 +123,94 @@ function PublishConfirmModal({
             )}
             Confirm Published
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Image Prompt Dialog ─────────────────────────────────────────────────────
+
+function ImagePromptDialog({
+  open,
+  item,
+  onClose,
+}: {
+  open: boolean;
+  item: QueueItem | null;
+  onClose: () => void;
+}) {
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  const generateMutation = trpc.queue.generateImagePrompt.useMutation({
+    onSuccess: (data) => setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : ""),
+    onError: (err) => toast.error(err.message),
+  });
+
+  function handleGenerate() {
+    if (!item) return;
+    setImagePrompt("");
+    generateMutation.mutate({
+      postId: item.post.id,
+      postContent: item.post.content,
+      profile: item.job.profile as "aa_company" | "david_personal" | "blog_post",
+    });
+  }
+
+  function copyPrompt() {
+    navigator.clipboard.writeText(imagePrompt);
+    setCopiedPrompt(true);
+    toast.success("Image prompt copied");
+    setTimeout(() => setCopiedPrompt(false), 3000);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setImagePrompt(""); onClose(); } }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Image size={16} className="text-primary" />
+            Generate Image Prompt
+          </DialogTitle>
+          <DialogDescription>
+            AI-generated prompt based on the post content and your image guidelines. Paste into Midjourney or DALL-E.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          {generateMutation.isPending ? (
+            <div className="flex items-center gap-2 py-6 justify-center">
+              <Loader2 size={18} className="animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Generating image prompt…</span>
+            </div>
+          ) : imagePrompt ? (
+            <div className="space-y-2">
+              <div className="bg-muted/50 rounded-md p-3 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                {imagePrompt}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={copyPrompt}>
+                  {copiedPrompt ? <Check size={13} /> : <Copy size={13} />}
+                  {copiedPrompt ? "Copied!" : "Copy Prompt"}
+                </Button>
+                <Button size="sm" variant="ghost" className="gap-1.5" onClick={handleGenerate} disabled={generateMutation.isPending}>
+                  <Sparkles size={13} />
+                  Regenerate
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6">
+              <p className="text-sm text-muted-foreground text-center">Generate a Midjourney/DALL-E prompt tailored to this post and your brand image guidelines.</p>
+              <Button className="gap-1.5" onClick={handleGenerate}>
+                <Sparkles size={13} />
+                Generate
+              </Button>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -268,6 +358,7 @@ function CalendarView({
 export default function QueuePage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [publishModalPostId, setPublishModalPostId] = useState<number | null>(null);
+  const [imagePromptItem, setImagePromptItem] = useState<QueueItem | null>(null);
 
   const queueQuery = trpc.queue.list.useQuery(undefined, { refetchInterval: 30000 });
 
@@ -396,7 +487,16 @@ export default function QueuePage() {
                                 {post.content}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 text-muted-foreground"
+                                onClick={() => setImagePromptItem({ post, job })}
+                              >
+                                <Image size={13} />
+                                Image Prompt
+                              </Button>
                               <Button
                                 asChild
                                 variant="outline"
@@ -497,6 +597,13 @@ export default function QueuePage() {
         open={publishModalPostId !== null}
         postId={publishModalPostId}
         onClose={() => setPublishModalPostId(null)}
+      />
+
+      {/* Image prompt dialog */}
+      <ImagePromptDialog
+        open={imagePromptItem !== null}
+        item={imagePromptItem}
+        onClose={() => setImagePromptItem(null)}
       />
     </AppLayout>
   );

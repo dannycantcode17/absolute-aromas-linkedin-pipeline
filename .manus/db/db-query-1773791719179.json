@@ -1,0 +1,49 @@
+{
+  "query": "SHOW TABLES; SELECT profile, LEFT(content, 50) as content_preview, updatedAt FROM style_guides; SELECT id, LEFT(competitorNames, 50) as competitors, LEFT(bannedPhrases, 50) as banned FROM guardrail_config; SELECT * FROM posting_rhythm;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2hHSMRHwrZkQd5j.root --database 9w9MUqAiwr2AU8wMzatFxY --execute SHOW TABLES; SELECT profile, LEFT(content, 50) as content_preview, updatedAt FROM style_guides; SELECT id, LEFT(competitorNames, 50) as competitors, LEFT(bannedPhrases, 50) as banned FROM guardrail_config; SELECT * FROM posting_rhythm;",
+  "rows": [
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "approval_tokens"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "approver_config"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "audit_log"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "guardrail_config"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "guardrail_reviews"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "idea_batches"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "ideas"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "jobs"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "posting_rhythm"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "posts"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "style_guides"
+    },
+    {
+      "Tables_in_9w9MUqAiwr2AU8wMzatFxY": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_9w9MUqAiwr2AU8wMzatFxY\n__drizzle_migrations\napproval_tokens\napprover_config\naudit_log\nguardrail_config\nguardrail_reviews\nidea_batches\nideas\njobs\nposting_rhythm\nposts\nstyle_guides\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 78
+}

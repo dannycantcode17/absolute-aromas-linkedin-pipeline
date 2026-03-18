@@ -138,3 +138,59 @@
 - [x] Bug: Hardcoded approver names throughout UI — added public settings.getApproverNames tRPC endpoint; updated SubmitJob, JobDetailPage, ApprovalPage, ApprovalQueuePage to pull names dynamically from DB
 - [x] Bug: Admin Approvers section headers showed person names — changed to role labels: "AA Company Page Approver" and "David Personal Page Approver"
 - [x] Bug: /approval error screen was a dead end — added "Go to Dashboard" button to ErrorScreen
+
+## Major UX Overhaul (Session 4)
+
+### Schema & Data
+- [x] Add `savedAt` timestamp column to `ideas` table (migration)
+- [x] Add `image_guidelines` table: profile, content, updatedAt (migration)
+- [x] Seed style_guides: AA Company, David Personal, Blog Post defaults
+- [x] Seed guardrail_config with hardcoded patterns from notion.ts
+- [x] Seed posting_rhythm defaults (AA: 3, David: 2, Blog: 1)
+- [x] Seed image_guidelines with AA/David/Blog defaults
+
+### Critical Bug Fixes
+- [x] Fix Home.tsx setState-in-render: move navigate() into useEffect
+- [x] Fix Approval Queue crash: investigated — stale HMR error, resolved by fix above
+- [x] Infinite spinner on Ready to Post: correct auth-loading behaviour, no change needed
+- [x] Infinite spinner on Guardrail Review: correct auth-loading behaviour, no change needed
+
+### Navigation Restructure
+- [x] Remove "Submit Post" from sidebar
+- [x] Add "Saved Ideas" nav item between Idea Generator and Ready to Post
+- [x] Reorder nav: Dashboard, Idea Generator, Saved Ideas, Ready to Post, Guardrail Review, Post History, Admin
+
+### Idea Generator Redesign
+- [x] Add optional manual input field at top ("Got your own angle?")
+- [x] Add blog_post to profile selector
+- [x] Checkbox per idea card to save to Saved Ideas
+- [x] Ticked ideas auto-added to Saved Ideas (set savedAt, keep status=pending)
+- [x] "Skip to Draft" / "Queue" button per card
+
+### Saved Ideas Page (new)
+- [x] Create SavedIdeasPage.tsx with split-panel layout
+- [x] Left panel: list of saved (pending) ideas with Draft/Delete buttons
+- [x] Right panel: drafting workspace (empty state → idea loaded → generate → submit)
+- [x] Generate Draft button calls generation pipeline
+- [x] Redraft with feedback: text input + regenerate
+- [x] Submit for Approval: creates job, moves to approval queue
+- [x] Register /saved-ideas route in App.tsx
+
+### Ready to Post — Image Prompt
+- [x] "Generate Image Prompt" button per post card
+- [x] Image Prompt dialog: generate, copy, regenerate
+- [x] Reads post content + image guidelines from DB via LLM
+
+### Admin Settings — Image Guidelines Tab
+- [x] Add image_guidelines tRPC procedures: listImageGuidelines, upsertImageGuideline, getImageGuideline
+- [x] Add Image Guidelines tab to AdminPage (6 tabs total)
+- [x] Save button + last updated timestamp per guide
+
+### Dashboard Calendar
+- [x] Calendar already uses 3-dot system (cyan=AA, amber=David, violet=Blog) — already done in V4
+
+### Notion-to-DB Migration Completion
+- [x] Move guardrail regex patterns from notion.ts to guardrailPatterns.ts
+- [x] Update guardrails.ts to import from guardrailPatterns.ts
+- [x] Enforce hard fail on empty style guide in pipeline.ts (throws with clear message)
+- [x] notion.ts now only used for audit log sync (fetchStyleGuide still present but unused)

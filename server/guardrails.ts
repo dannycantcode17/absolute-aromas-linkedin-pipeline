@@ -18,7 +18,7 @@ import {
   POLITICAL_CONTENT_PATTERNS,
   REVENUE_FIGURE_PATTERNS,
   SUPERLATIVE_CLAIM_PATTERNS,
-} from "./notion";
+} from "./guardrailPatterns";
 
 export interface GuardrailResult {
   passed: boolean; // true = no blocking flags

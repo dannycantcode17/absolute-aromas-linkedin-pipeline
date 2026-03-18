@@ -523,6 +523,32 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    /** Generate an image prompt for a post using LLM + image guidelines */
+    generateImagePrompt: protectedProcedure
+      .input(z.object({
+        postId: z.number().int(),
+        postContent: z.string(),
+        profile: z.enum(["aa_company", "david_personal", "blog_post"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { getImageGuidelineForProfile } = await import("./db");
+        const guideline = await getImageGuidelineForProfile(input.profile);
+        const guidelineText = guideline?.content ?? "";
+        const { invokeLLM } = await import("./_core/llm");
+        const systemPrompt = guidelineText
+          ? `You are an expert visual content director for a premium essential oil brand. Use these image guidelines:\n\n${guidelineText}\n\nGenerate a detailed, specific image prompt for a visual that would accompany this LinkedIn post. The prompt should be ready to paste into Midjourney or DALL-E.`
+          : `You are an expert visual content director for a premium essential oil brand. Generate a detailed, specific image prompt for a visual that would accompany this LinkedIn post. The prompt should be ready to paste into Midjourney or DALL-E.`;
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `LinkedIn post:\n\n${input.postContent}\n\nGenerate an image prompt for this post.` },
+          ],
+        });
+        const imagePrompt = response.choices?.[0]?.message?.content ?? "";
+        return { imagePrompt };
+      }),
+
     /** Get analytics data for the dashboard strip */
     analytics: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
@@ -818,6 +844,21 @@ Return a JSON array of 10 ideas.`;
         await updateIdeaStatus(input.ideaId, "rejected");
         return { success: true };
       }),
+
+    /** Save an idea (tick checkbox) — sets savedAt timestamp */
+    save: protectedProcedure
+      .input(z.object({ ideaId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        const { saveIdea } = await import("./db");
+        await saveIdea(input.ideaId);
+        return { success: true };
+      }),
+
+    /** List all saved ideas for the current user */
+    listSaved: protectedProcedure.query(async ({ ctx }) => {
+      const { listSavedIdeas } = await import("./db");
+      return listSavedIdeas(ctx.user.id);
+    }),
   }),
 
   // ─── Admin ─────────────────────────────────────────────────────────────
@@ -949,6 +990,38 @@ Return a JSON array of 10 ideas.`;
         const { upsertPostingRhythm } = await import("./db");
         await upsertPostingRhythm(input.profile, input.targetPerWeek);
         return { success: true };
+      }),
+
+    // Image Guidelines
+    listImageGuidelines: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { getAllImageGuidelines } = await import("./db");
+      return getAllImageGuidelines();
+    }),
+
+    upsertImageGuideline: protectedProcedure
+      .input(z.object({
+        profile: z.enum(["aa_company", "david_personal", "blog_post"]),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { upsertImageGuideline } = await import("./db");
+        await upsertImageGuideline(input.profile, input.content);
+        await addAuditEntry({
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "image_guideline_updated",
+          details: { profile: input.profile },
+        });
+        return { success: true };
+      }),
+
+    /** Get image guideline for a specific profile (used by Generate Image Prompt) */
+    getImageGuideline: protectedProcedure
+      .input(z.object({ profile: z.enum(["aa_company", "david_personal", "blog_post"]) }))
+      .query(async ({ ctx, input }) => {
+        const { getImageGuidelineForProfile } = await import("./db");
+        return getImageGuidelineForProfile(input.profile);
       }),
   }),
 });

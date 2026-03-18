@@ -15,6 +15,7 @@ import JobDetailPage from "./pages/JobDetailPage";
 import IdeaGenerator from "./pages/IdeaGenerator";
 import GuardrailReviewPage from "./pages/GuardrailReviewPage";
 import ApprovalQueuePage from "./pages/ApprovalQueuePage";
+import SavedIdeasPage from "./pages/SavedIdeasPage";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/approval-queue" component={ApprovalQueuePage} />
       <Route path="/guardrails" component={GuardrailReviewPage} />
       <Route path="/ideas" component={IdeaGenerator} />
+      <Route path="/saved-ideas" component={SavedIdeasPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
