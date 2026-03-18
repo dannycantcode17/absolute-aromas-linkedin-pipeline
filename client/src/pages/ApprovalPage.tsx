@@ -229,7 +229,7 @@ export default function ApprovalPage() {
   const { job, posts, approverRole } = approvalQuery.data!;
   const profileLabel =
     job.profile === "aa_company"
-      ? "Absolute Aromas Company Page"
+      ? "AA Company Page"
       : `${approverNames?.david ?? "David"} Personal Page`;
   const approverName = approverRole === "david"
     ? (approverNames?.david ?? "David")
@@ -250,8 +250,8 @@ export default function ApprovalPage() {
             <Leaf size={14} className="text-primary-foreground" />
           </div>
           <div>
-            <p className="font-semibold text-sm text-foreground leading-tight">Absolute Aromas</p>
-            <p className="text-xs text-muted-foreground leading-tight">LinkedIn Post Approval</p>
+            <p className="font-bold text-[15px] leading-tight" style={{color:'#06B6D4'}}>poster</p>
+            <p className="text-xs text-muted-foreground leading-tight">Post Approval</p>
           </div>
         </div>
       </header>
@@ -259,7 +259,7 @@ export default function ApprovalPage() {
       <div className="container py-6 max-w-5xl">
         {/* Intro */}
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-foreground mb-1">Review LinkedIn Post</h1>
+          <h1 className="text-xl font-bold text-foreground mb-1">Review Post</h1>
           <p className="text-sm text-muted-foreground">
             Hi {approverName}, review the variants below and choose an action. Select a variant to approve it.
           </p>

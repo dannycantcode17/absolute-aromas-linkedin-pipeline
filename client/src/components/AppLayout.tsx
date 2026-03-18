@@ -67,7 +67,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="text-primary animate-spin" size={28} />
-          <p className="text-muted-foreground text-xs tracking-wide">Loading pipeline...</p>
+          <p className="text-muted-foreground text-xs tracking-wide">Loading poster...</p>
         </div>
       </div>
     );
@@ -92,14 +92,13 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
               <Leaf size={20} className="text-primary" />
             </div>
             <div className="text-left">
-              <p className="text-foreground font-semibold text-sm leading-tight">Absolute Aromas</p>
-              <p className="text-muted-foreground text-xs">LinkedIn Pipeline</p>
+              <p className="text-foreground font-bold text-lg leading-tight tracking-tight" style={{color:'#06B6D4'}}>poster</p>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-foreground mb-2">Content Pipeline</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Welcome to poster</h1>
           <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
-            Brand-compliant LinkedIn content — from idea to approved post, with a full audit trail.
+            Brand-compliant social content — from idea to approved post, with a full audit trail.
           </p>
 
           <Button asChild className="w-full h-10 font-medium">
@@ -107,7 +106,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
           </Button>
 
           <p className="text-xs text-muted-foreground mt-4">
-            Access is restricted to the Absolute Aromas team.
+            Access is restricted to your team.
           </p>
         </div>
       </div>
@@ -138,10 +137,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             <Leaf size={14} className="text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-sidebar-foreground font-semibold text-[13px] leading-tight truncate">
-              Absolute Aromas
-            </p>
-            <p className="text-muted-foreground text-[11px] truncate">LinkedIn Pipeline</p>
+            <p className="font-bold text-[15px] leading-tight truncate" style={{color:'#06B6D4'}}>poster</p>
           </div>
         </div>
       </div>
@@ -243,8 +239,7 @@ export default function AppLayout({ children, title }: AppLayoutProps) {
             <Menu size={17} />
           </Button>
           <div className="flex items-center gap-2">
-            <Leaf size={16} className="text-primary" />
-            <span className="font-semibold text-[13px] text-foreground">Absolute Aromas</span>
+            <span className="font-bold text-[15px]" style={{color:'#06B6D4'}}>poster</span>
           </div>
         </header>
 

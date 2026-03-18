@@ -126,6 +126,8 @@ export const posts = mysqlTable("posts", {
     .notNull(),
   /** Guardrail flags detected on this variant (JSON array of flag objects) */
   guardrailFlags: json("guardrailFlags").$type<GuardrailFlag[]>(),
+  /** Challenger Review result — JSON array of { persona, review } objects from GPT-4o multi-persona audit */
+  challengerReview: json("challengerReview").$type<ChallengerReviewResult[]>(),
   /** Approver who approved/rejected (must match job.requiredApprover) */
   approvedBy: varchar("approvedBy", { length: 64 }),
   approvedAt: timestamp("approvedAt"),
@@ -158,6 +160,14 @@ export const posts = mysqlTable("posts", {
 
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = typeof posts.$inferInsert;
+
+// ─── Challenger Review ──────────────────────────────────────────────────────────
+// Stored inline as JSON on posts.challengerReview.
+
+export type ChallengerReviewResult = {
+  persona: string;
+  review: string;
+};
 
 // ─── Guardrail Flags ──────────────────────────────────────────────────────────
 // Stored inline as JSON on posts, but also as a separate table for querying.

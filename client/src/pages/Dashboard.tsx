@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 import { useState, useMemo } from "react";
 import {
-  Clock, CheckCircle2, Inbox, TrendingUp,
+  Clock, CheckCircle2, Inbox, TrendingUp, ShieldAlert,
   ChevronLeft, ChevronRight, AlertTriangle, Loader2,
   ExternalLink, PenLine, Sparkles, RefreshCw,
 } from "lucide-react";
@@ -334,19 +334,20 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 4-stat row */}
+          {/* 5-stat row */}
           {loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="rounded-lg border border-white/5 bg-[#1a1d27] h-28 animate-pulse" />
               ))}
             </div>
           ) : stats ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatCard label="Posts This Week" value={stats.postsThisWeek} sub="confirmed live" icon={CheckCircle2} accent />
               <StatCard label="In Queue" value={stats.inQueue} sub="approved, not yet posted" icon={Inbox} />
               <StatCard label="Awaiting Approval" value={stats.awaitingApproval} sub={stats.awaitingApproval > 0 ? "needs attention" : "all clear"} icon={Clock} />
               <StatCard label="Avg Posts / Week" value={stats.avgPostsPerWeek} sub="rolling 4-week average" icon={TrendingUp} />
+              <StatCard label="Content Flags" value={(stats as Record<string, unknown>).contentFlags as number ?? 0} sub={(stats as Record<string, unknown>).contentFlags as number > 0 ? "compliance warnings" : "no flags"} icon={ShieldAlert} />
             </div>
           ) : null}
 

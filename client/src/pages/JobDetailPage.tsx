@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, RefreshCw, Loader2, Copy, Check } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, Copy, Check, Users, Sparkles } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -24,6 +24,20 @@ export default function JobDetailPage() {
   const jobId = Number(id);
   const { user } = useAuth();
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [challengerLoadingId, setChallengerLoadingId] = useState<number | null>(null);
+  const [challengerResultsMap, setChallengerResultsMap] = useState<Record<number, Array<{ persona: string; review: string }>>>({});
+
+  const challengerReviewMutation = trpc.ideas.challengerReview.useMutation({
+    onSuccess: (data, variables) => {
+      setChallengerResultsMap((prev) => ({ ...prev, [variables.postId]: data.reviews }));
+      setChallengerLoadingId(null);
+      toast.success("Challenger Review complete");
+    },
+    onError: (err) => {
+      setChallengerLoadingId(null);
+      toast.error("Challenger Review failed: " + err.message);
+    },
+  });
 
   const jobQuery = trpc.jobs.get.useQuery({ jobId }, { enabled: !isNaN(jobId) });
   const { data: approverNames } = trpc.settings.getApproverNames.useQuery();
@@ -201,6 +215,48 @@ export default function JobDetailPage() {
                             {flag.severity === "block" ? "BLOCKED" : "WARNING"}: {flag.description}
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Challenger Review section */}
+                    {(post.status === "draft" || post.status === "pending_approval") && isAdmin && (
+                      <div className="mt-3 rounded border border-violet-500/20 bg-violet-500/5">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-violet-500/10">
+                          <div className="flex items-center gap-1.5">
+                            <Users size={12} className="text-violet-400" />
+                            <span className="text-xs font-semibold text-violet-300">Challenger Review</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setChallengerLoadingId(post.id);
+                              challengerReviewMutation.mutate({ postId: post.id });
+                            }}
+                            disabled={challengerLoadingId === post.id}
+                            className="text-[11px] text-violet-400 hover:text-violet-300 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {challengerLoadingId === post.id ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                            {challengerLoadingId === post.id ? "Running…" : challengerResultsMap[post.id] || (post as Record<string, unknown>).challengerReview ? "Re-run" : "Run"}
+                          </button>
+                        </div>
+                        {(() => {
+                          const reviews = challengerResultsMap[post.id] ?? ((post as Record<string, unknown>).challengerReview as Array<{ persona: string; review: string }> | null);
+                          if (reviews && reviews.length > 0) {
+                            return (
+                              <div className="divide-y divide-violet-500/10">
+                                {reviews.map((r, i) => (
+                                  <div key={i} className="px-3 py-2">
+                                    <p className="text-[10px] font-semibold text-violet-400 mb-0.5">{r.persona}</p>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">{r.review}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          if (challengerLoadingId !== post.id) {
+                            return <p className="px-3 py-2 text-[11px] text-muted-foreground/60">6-persona AI critique. Run before approving.</p>;
+                          }
+                          return null;
+                        })()}
                       </div>
                     )}
                   </CardContent>

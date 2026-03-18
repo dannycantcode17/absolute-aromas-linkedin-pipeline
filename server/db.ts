@@ -427,7 +427,7 @@ export async function markAuditEntrySynced(id: number, notionPageId: string) {
 export async function getDashboardStats() {
   const db = await getDb();
   const empty = {
-    postsThisWeek: 0, inQueue: 0, awaitingApproval: 0, avgPostsPerWeek: 0,
+    postsThisWeek: 0, inQueue: 0, awaitingApproval: 0, avgPostsPerWeek: 0, contentFlags: 0,
     pillarDistribution: [] as { pillar: string; count: number }[],
     calendarData: [] as { date: string; aaCount: number; davidCount: number; blogCount: number }[],
     pendingApprovalJobIds: [] as number[],
@@ -490,7 +490,11 @@ export async function getDashboardStats() {
   }
   const calendarData = Object.entries(calendarMap).map(([date, counts]) => ({ date, ...counts }));
 
-  return { postsThisWeek, inQueue, awaitingApproval, avgPostsPerWeek, pillarDistribution, calendarData, pendingApprovalJobIds };
+  const contentFlags = allPosts.filter(
+    (p) => p.status === "flagged" || (p.guardrailFlags && Array.isArray(p.guardrailFlags) && (p.guardrailFlags as unknown[]).length > 0)
+  ).length;
+
+  return { postsThisWeek, inQueue, awaitingApproval, avgPostsPerWeek, contentFlags, pillarDistribution, calendarData, pendingApprovalJobIds };
 }
 
 // ─── Published posts for History page (v4 simplified) ────────────────────────

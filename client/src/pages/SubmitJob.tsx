@@ -131,8 +131,7 @@ export default function SubmitJob() {
             <CheckCircle2 className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-slate-100 mb-2">Idea Submitted</h2>
             <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-              Your content idea is in the pipeline. Claude is now fetching the Absolute Aromas style guide
-              and generating {variantCount} post variants. The approver will receive an email once drafts
+              Your content idea is in the pipeline. The AI is now generating {variantCount} post variants. The approver will receive an email once drafts
               are ready for review — typically within a few minutes.
             </p>
             <div className="rounded-lg border border-white/5 bg-[#0f1117] p-4 text-left mb-6">
@@ -254,7 +253,7 @@ export default function SubmitJob() {
               <ol className="space-y-2">
                 {[
                   { step: "Fill in the form below", detail: "Choose the profile, content pillar, and describe your idea. The more detail you give, the better Claude's output." },
-                  { step: "Claude generates variants", detail: "The AI fetches the live Absolute Aromas style guide from Notion and produces 3–5 distinct post drafts tailored to the chosen profile's voice." },
+                  { step: "AI generates variants", detail: "The AI uses your configured style guide and produces 3–5 distinct post drafts tailored to the chosen profile's voice." },
                   { step: "Guardrail checks run automatically", detail: "Every draft is checked against 6 brand compliance rules (medical claims, revenue figures, competitor names, etc.). Flagged posts go to Guardrail Review before the approver sees them." },
                   { step: "Approver receives an email", detail: `${approverNames.danny} (for AA Company posts) or ${approverNames.david} (for their personal page) gets an email with all drafts and a one-click approve button.` },
                   { step: "Approved posts land in the queue", detail: "Once approved, the post appears in Ready-to-Post. Copy it, paste it into LinkedIn, then confirm publication with the LinkedIn URL." },

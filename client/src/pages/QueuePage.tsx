@@ -78,7 +78,7 @@ function profileConfig(profile: Profile) {
     };
   }
   return {
-    label: "Next LinkedIn Post — Absolute Aromas",
+    label: "Next LinkedIn Post — AA Company",
     shortLabel: "LinkedIn · AA",
     icon: <Building2 size={13} className="text-cyan-400" />,
     badgeClass: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
@@ -171,22 +171,38 @@ function ImagePromptDialog({
 }) {
   const [imagePrompt, setImagePrompt] = useState("");
   const [copied, setCopied] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   const generateMutation = trpc.queue.generateImagePrompt.useMutation({
     onSuccess: (data) => {
       setImagePrompt(typeof data.imagePrompt === "string" ? data.imagePrompt : JSON.stringify(data.imagePrompt));
+      setGeneratedImageUrl(null);
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  const generateImageMutation = trpc.queue.generateImage.useMutation({
+    onSuccess: (data) => {
+      setGeneratedImageUrl(data.imageUrl ?? null);
+      toast.success("Image generated!");
+    },
+    onError: (err) => toast.error("Image generation failed: " + err.message),
   });
 
   function handleGenerate() {
     if (!item) return;
     setImagePrompt("");
+    setGeneratedImageUrl(null);
     generateMutation.mutate({
       postId: item.post.id,
       postContent: item.post.content,
       profile: item.job.profile,
     });
+  }
+
+  function handleGenerateImage() {
+    if (!item || !imagePrompt) return;
+    generateImageMutation.mutate({ prompt: imagePrompt, postId: item.post.id });
   }
 
   function handleCopy() {
@@ -196,11 +212,17 @@ function ImagePromptDialog({
     setTimeout(() => setCopied(false), 2500);
   }
 
+  function handleClose() {
+    setImagePrompt("");
+    setGeneratedImageUrl(null);
+    onClose();
+  }
+
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
-        if (!o) { setImagePrompt(""); onClose(); }
+        if (!o) handleClose();
         else if (item && !imagePrompt && !generateMutation.isPending) handleGenerate();
       }}
     >
@@ -208,48 +230,97 @@ function ImagePromptDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ImageIcon size={15} className="text-primary" />
-            Generate Image Prompt
+            Image Generation
           </DialogTitle>
           <DialogDescription>
-            AI-generated brief based on the post and your image guidelines. Paste into Midjourney or DALL-E.
+            AI-generated brief based on the post and your image guidelines. Copy for Midjourney or generate inline.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           {generateMutation.isPending ? (
             <div className="flex items-center justify-center gap-2 py-8">
               <Loader2 size={18} className="animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Generating brief…</span>
+              <span className="text-sm text-muted-foreground">Generating prompt…</span>
             </div>
           ) : imagePrompt ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="bg-muted/40 rounded-md p-3 text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                 {imagePrompt}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCopy}>
                   {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? "Copied!" : "Copy"}
+                  {copied ? "Copied!" : "Copy Prompt"}
                 </Button>
-                <Button size="sm" variant="ghost" className="gap-1.5" onClick={handleGenerate} disabled={generateMutation.isPending}>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleGenerate} disabled={generateMutation.isPending}>
                   <RotateCcw size={12} />
-                  Regenerate
+                  Regenerate Prompt
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-1.5 ml-auto"
+                  onClick={handleGenerateImage}
+                  disabled={generateImageMutation.isPending}
+                >
+                  {generateImageMutation.isPending ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <ImageIcon size={12} />
+                  )}
+                  {generateImageMutation.isPending ? "Generating…" : "Generate Image"}
                 </Button>
               </div>
+              {generateImageMutation.isPending && (
+                <div className="flex items-center justify-center gap-2 py-4 rounded-md border border-border bg-muted/20">
+                  <Loader2 size={16} className="animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Creating image… this may take 15–30 seconds</span>
+                </div>
+              )}
+              {generatedImageUrl && (
+                <div className="space-y-2">
+                  <img
+                    src={generatedImageUrl}
+                    alt="AI-generated post image"
+                    className="w-full rounded-md border border-border object-cover"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 flex-1"
+                      onClick={() => window.open(generatedImageUrl, "_blank")}
+                    >
+                      <ExternalLink size={11} />
+                      Open Full Size
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1.5"
+                      onClick={handleGenerateImage}
+                      disabled={generateImageMutation.isPending}
+                    >
+                      <RotateCcw size={11} />
+                      Regenerate
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-6">
               <p className="text-sm text-muted-foreground text-center">
-                Generate a Midjourney/DALL-E prompt tailored to this post and your brand image guidelines.
+                Generate a prompt tailored to this post and your brand image guidelines. Then copy it or generate an image inline.
               </p>
               <Button className="gap-1.5" onClick={handleGenerate}>
                 <Sparkles size={13} />
-                Generate
+                Generate Prompt
               </Button>
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+          <Button variant="ghost" size="sm" onClick={handleClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

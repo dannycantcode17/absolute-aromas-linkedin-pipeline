@@ -10,7 +10,7 @@ const features = [
     icon: <Sparkles size={17} className="text-primary" />,
     title: "AI-Powered Generation",
     description:
-      "Claude generates 3–5 brand-aligned post variants per submission, informed by the Absolute Aromas style guide configured in Admin.",
+      "The AI generates 3–5 brand-aligned post variants per submission, informed by the style guide configured in Admin.",
   },
   {
     icon: <ShieldCheck size={17} className="text-primary" />,
@@ -72,8 +72,7 @@ export default function Home() {
               <Leaf size={14} className="text-primary" />
             </div>
             <div>
-              <p className="text-foreground font-semibold text-[13px] leading-tight">Absolute Aromas</p>
-              <p className="text-muted-foreground text-[11px]">LinkedIn Pipeline</p>
+              <p className="font-bold text-[15px] leading-tight" style={{color:'#06B6D4'}}>poster</p>
             </div>
           </div>
           <Button size="sm" asChild className="h-8 text-[13px] font-medium">
@@ -96,7 +95,7 @@ export default function Home() {
           </h1>
 
           <p className="text-muted-foreground text-base leading-relaxed max-w-xl mx-auto">
-            Submit an idea. Claude generates post variants using the live Absolute Aromas style guide.
+            Submit an idea. The AI generates post variants using your live style guide.
             Guardrails check every word. Approvers review and approve. You copy and post.
           </p>
 
@@ -151,7 +150,7 @@ export default function Home() {
       <footer className="relative border-t border-border/60 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <p className="text-muted-foreground text-[11px]">
-            © {new Date().getFullYear()} Absolute Aromas — internal tool only.
+            © {new Date().getFullYear()} poster — internal tool only.
           </p>
           <p className="text-muted-foreground text-[11px]">No auto-publish. No exceptions.</p>
         </div>

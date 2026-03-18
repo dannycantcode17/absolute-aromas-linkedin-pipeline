@@ -50,6 +50,13 @@
       "when": 1773798193040,
       "tag": "0006_silky_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1742300000000,
+      "tag": "0007_challenger_review",
+      "breakpoints": true
     }
   ]
 }

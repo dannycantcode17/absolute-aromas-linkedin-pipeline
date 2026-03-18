@@ -27,6 +27,7 @@ import {
   BookOpen,
   AlertCircle,
   CheckCircle2,
+  Users,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { AA_COMPANY_PILLARS, DAVID_PERSONAL_PILLARS } from "@/lib/pillars";
@@ -110,6 +111,20 @@ export default function SavedIdeasPage() {
     },
   });
 
+  const [challengerReviews, setChallengerReviews] = useState<Array<{ persona: string; review: string }> | null>(null);
+  const [challengerLoading, setChallengerLoading] = useState(false);
+
+  const challengerReviewMutation = trpc.ideas.challengerReview.useMutation({
+    onSuccess: (data) => {
+      setChallengerReviews(data.reviews);
+      setChallengerLoading(false);
+    },
+    onError: (err) => {
+      setChallengerLoading(false);
+      toast.error("Challenger Review failed: " + err.message);
+    },
+  });
+
   const submitMutation = trpc.ideas.submitForApproval.useMutation({
     onSuccess: (data) => {
       setDraft({ phase: "submitted", status: data.status, message: data.message });
@@ -149,9 +164,17 @@ export default function SavedIdeasPage() {
     });
   }
 
+  function handleChallengerReview() {
+    if (draft.phase !== "draft") return;
+    setChallengerLoading(true);
+    setChallengerReviews(null);
+    challengerReviewMutation.mutate({ postId: draft.postId });
+  }
+
   function handleRedraft() {
     if (!selectedIdea || draft.phase !== "draft") return;
     const { jobId, postId, content } = draft;
+    setChallengerReviews(null);
     setDraft({ phase: "redrafting", jobId, postId, content });
     generateDraftMutation.mutate({
       ideaId: selectedIdea.id,
@@ -356,6 +379,36 @@ export default function SavedIdeasPage() {
                             className="resize-none text-xs"
                           />
                         </div>
+                        {/* Challenger Review panel */}
+                        <div className="rounded-lg border border-violet-500/20 bg-violet-500/5">
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-violet-500/10">
+                            <div className="flex items-center gap-1.5">
+                              <Users size={12} className="text-violet-400" />
+                              <span className="text-xs font-semibold text-violet-300">Challenger Review</span>
+                            </div>
+                            <button
+                              onClick={handleChallengerReview}
+                              disabled={challengerLoading}
+                              className="text-[11px] text-violet-400 hover:text-violet-300 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {challengerLoading ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                              {challengerLoading ? "Running…" : challengerReviews ? "Re-run" : "Run"}
+                            </button>
+                          </div>
+                          {challengerReviews && challengerReviews.length > 0 ? (
+                            <div className="divide-y divide-violet-500/10">
+                              {challengerReviews.map((r, i) => (
+                                <div key={i} className="px-3 py-2">
+                                  <p className="text-[10px] font-semibold text-violet-400 mb-0.5">{r.persona}</p>
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed">{r.review}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : !challengerLoading ? (
+                            <p className="px-3 py-2 text-[11px] text-muted-foreground/60">6-persona AI critique of this draft. Run before submitting.</p>
+                          ) : null}
+                        </div>
+
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" className="gap-1.5 flex-1" onClick={handleRedraft}>
                             <RotateCcw size={12} />

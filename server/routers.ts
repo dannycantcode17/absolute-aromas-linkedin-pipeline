@@ -561,6 +561,27 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       return getDashboardStats();
     }),
+
+    /** Generate an image using DALL-E / Forge image service from a prompt */
+    generateImage: protectedProcedure
+      .input(z.object({
+        prompt: z.string().min(1),
+        postId: z.number().int().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { generateImage } = await import("./_core/imageGeneration");
+        const result = await generateImage({ prompt: input.prompt });
+        if (input.postId) {
+          await addAuditEntry({
+            postId: input.postId,
+            actor: ctx.user.name ?? ctx.user.openId,
+            action: "image_generated",
+            details: { prompt: input.prompt.slice(0, 200), imageUrl: result.url },
+          });
+        }
+        return { imageUrl: result.url };
+      }),
   }),
 
   // ─── History ───────────────────────────────────────────────────────────────
@@ -1055,9 +1076,70 @@ Return a JSON array of 10 ideas.`;
 
         return { success: true, status: "pending_approval" as const, message: `Draft submitted to ${approverCfg.name} for approval.` };
       }),
+
+    /**
+     * Run a Challenger Review (GPT-4o multi-persona audit) on a post draft.
+     * Async, non-blocking. Persists result to posts.challengerReview.
+     */
+    challengerReview: protectedProcedure
+      .input(
+        z.object({
+          postId: z.number().int(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const post = await getPostById(input.postId);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+        const { invokeLLM } = await import("./_core/llm");
+
+        const systemPrompt = `You are six different reviewers of the following social media post draft for an essential oils brand.
+For each persona below, write exactly ONE sentence of critique. No more. Be direct.
+
+Personas: Essential Oils Compliance Expert, Average Consumer, Clinical Practitioner, SEO & Digital Marketer, Lifestyle Blogger, Brand Guardian
+
+Return JSON only. No preamble. No markdown.
+{ "reviews": [ { "persona": "...", "review": "..." } ] }`;
+
+        const userMessage = `Post: ${post.content}`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage },
+          ],
+          responseFormat: { type: "json_object" },
+        });
+
+        const raw = response.choices?.[0]?.message?.content ?? "{}";
+        let reviews: Array<{ persona: string; review: string }> = [];
+        try {
+          const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+          reviews = Array.isArray(parsed.reviews) ? parsed.reviews : [];
+        } catch {
+          reviews = [];
+        }
+
+        // Persist to post record
+        const db = await (await import("./db")).getDb();
+        if (db) {
+          const { posts: postsTable } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(postsTable).set({ challengerReview: reviews }).where(eq(postsTable.id, input.postId));
+        }
+
+        await addAuditEntry({
+          postId: input.postId,
+          actor: ctx.user.name ?? ctx.user.openId,
+          action: "challenger_review_run",
+          details: { personaCount: reviews.length },
+        });
+
+        return { success: true, reviews };
+      }),
   }),
 
-  // ─── Admin ─────────────────────────────────────────────────────────────
+  // ─── Admin ───────────────────────────────────────────────────────────────────
 
   admin: router({
     /** List all users */
