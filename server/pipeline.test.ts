@@ -147,22 +147,6 @@ describe("auth.logout", () => {
   });
 });
 
-// ─── Notion API Key Test ──────────────────────────────────────────────────────
-
-describe("Notion API Key", () => {
-  it("NOTION_API_KEY is set in environment", () => {
-    // This validates the secret was injected correctly
-    const key = process.env.NOTION_API_KEY;
-    // Key should be set (may be empty string if user skipped, that's OK for now)
-    expect(key).toBeDefined();
-  });
-
-  it("NOTION_AUDIT_DB_ID is set in environment", () => {
-    const dbId = process.env.NOTION_AUDIT_DB_ID;
-    expect(dbId).toBeDefined();
-  });
-});
-
 // ─── Jobs Router: Pillar Lookup ───────────────────────────────────────────────
 
 describe("jobs.getPillars", () => {

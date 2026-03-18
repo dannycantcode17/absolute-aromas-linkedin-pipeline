@@ -26,9 +26,10 @@ import { ENV } from "./_core/env";
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const dbUrl = process.env.MYSQL_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!_db && dbUrl) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle(dbUrl);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -316,7 +317,6 @@ export async function addAuditEntry(entry: {
     actor: entry.actor,
     action: entry.action,
     details: entry.details ?? null,
-    notionSynced: false,
   });
 }
 
@@ -408,18 +408,6 @@ export async function updateIdeaStatus(
   const db = await getDb();
   if (!db) return;
   await db.update(ideas).set({ status, ...(jobId ? { jobId } : {}) }).where(eq(ideas.id, ideaId));
-}
-
-export async function getUnsyncedAuditEntries() {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(auditLog).where(eq(auditLog.notionSynced, false)).orderBy(auditLog.createdAt).limit(50);
-}
-
-export async function markAuditEntrySynced(id: number, notionPageId: string) {
-  const db = await getDb();
-  if (!db) return;
-  await db.update(auditLog).set({ notionSynced: true, notionPageId }).where(eq(auditLog.id, id));
 }
 
 // ─── Dashboard Stats (v4 redesign) ───────────────────────────────────────────

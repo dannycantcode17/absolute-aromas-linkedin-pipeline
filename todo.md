@@ -231,3 +231,19 @@
 - [x] JobDetailPage: "Required Approver" name field → "Reviewer"
 - [x] Home.tsx: remove hardcoded Danny/David from feature description, fix stale Notion reference
 - [x] QueuePage: new design has no hardcoded LinkedIn URLs
+
+## Deployment to Manus (Current Session)
+- [x] Clone GitHub repo to Manus sandbox
+- [x] Initialize as Manus web-db-user project
+- [x] Set up Railway MySQL database (project: refreshing-gratitude)
+- [x] Configure MYSQL_DATABASE_URL secret (Railway MySQL public connection)
+- [x] Configure RESEND_API_KEY secret
+- [x] Configure EMAIL_FROM secret
+- [x] Strip all Notion references from codebase (notion.ts, notionAuditLog.ts, NOTION_API_KEY, NOTION_AUDIT_DB_ID tests removed)
+- [x] Update env.ts and db.ts to use MYSQL_DATABASE_URL with DATABASE_URL fallback
+- [x] Run database migrations — all 13 tables applied to Railway MySQL
+- [x] pnpm install — clean
+- [x] pnpm build — clean
+- [x] pnpm test — 15/15 passing
+- [x] Save checkpoint and publish
+- [ ] Set APP_BASE_URL to the live published URL after publish
